@@ -190,14 +190,24 @@ export interface Uindow_CSS_Config {
 }
 
 /**
- * Document root
+ * CSS selector result
  */
-export type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
+export interface Uindow_CSS_Result {
+    /**
+     * Optimized CSS selector
+     */
+    selector: string;
+
+    /**
+     * CSS selector penalty (the lower, the better)
+     */
+    penalty: number;
+}
 
 /**
  * CSS selector node
  */
-export interface Uindow_CSS_Node {
+interface Uindow_CSS_Node {
     /**
      * Compound CSS selector for this node.
      * Multiple nodes are merged to form the final (complex) CSS selector.
@@ -218,22 +228,12 @@ export interface Uindow_CSS_Node {
 /**
  * CSS selector path
  */
-export type Uindow_CSS_Path = Uindow_CSS_Node[];
+type Uindow_CSS_Path = Uindow_CSS_Node[];
 
 /**
- * CSS selector result
+ * Document root
  */
-export interface Uindow_CSS_Result {
-    /**
-     * Full CSS selector
-     */
-    selector: string;
-
-    /**
-     * CSS selector penalty - the lower, the better
-     */
-    penalty: number;
-}
+type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
 
 /**
  * @namespace Uindow_CSS
@@ -825,4 +825,8 @@ class Uindow_CSS {
     }
 }
 
-export const { findOne, findAll } = Uindow_CSS;
+export const findOne: (element: HTMLElement, options?: Partial<Uindow_CSS_Config>) => Uindow_CSS_Result =
+    Uindow_CSS.findOne.bind(Uindow_CSS);
+
+export const findAll: (element: HTMLElement, options?: Partial<Uindow_CSS_Config>) => Uindow_CSS_Result[] =
+    Uindow_CSS.findAll.bind(Uindow_CSS);

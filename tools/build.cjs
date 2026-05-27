@@ -89,7 +89,7 @@ limitations under the License.`.trim();
         {
             // Npm: Common JS
             file: "index.js",
-            config: { format: "cjs" }
+            config: { format: "cjs", platform: "node" }
         },
         {
             // Npm: Module
@@ -106,10 +106,12 @@ limitations under the License.`.trim();
         await esbuild.build({
             entryPoints: [path.join(rootPath, "src", "index.ts")],
             outfile: path.join(rootPath, output.file),
+            bundle: true,
+            minify: true,
+            keepNames: true,
             minifyIdentifiers: false,
             target: ["es2020"],
             sourcemap: false,
-            minify: true,
             ...output.config
         });
         filePrepend(path.join(rootPath, output.file), "/**\n" + copyright.replace(/^/gm, " * ") + "\n */\n");

@@ -170,32 +170,6 @@ export interface Uindow_CSS_Config {
     timeout: number;
 }
 /**
- * Document root
- */
-export type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
-/**
- * CSS selector node
- */
-export interface Uindow_CSS_Node {
-    /**
-     * Compound CSS selector for this node.
-     * Multiple nodes are merged to form the final (complex) CSS selector.
-     */
-    compound: string;
-    /**
-     * CSS selector penalty - the lower, the better.
-     */
-    penalty: number;
-    /**
-     * Node level starting at `0` for the target element, incremented with each ancestor.
-     */
-    level: number;
-}
-/**
- * CSS selector path
- */
-export type Uindow_CSS_Path = Uindow_CSS_Node[];
-/**
  * CSS selector result
  */
 export interface Uindow_CSS_Result {
@@ -208,32 +182,5 @@ export interface Uindow_CSS_Result {
      */
     penalty: number;
 }
-/**
- * @namespace Uindow_CSS
- */
-declare class Uindow_CSS {
-    #private;
-    /**
-     * Return the single best CSS selector for the target element.
-     *
-     * @param element Target element
-     * @param options Search configuration
-     *
-     * @returns The best matching selector with its penalty score
-     * @throws {Error} If no selector can be generated
-     */
-    static findOne(element: HTMLElement, options?: Partial<Uindow_CSS_Config>): Uindow_CSS_Result;
-    /**
-     * Returns up to `maxResults` unique CSS selectors for `element`, ranked from
-     * lowest penalty (shortest / most semantic) to highest (longest / nth-child).
-     *
-     * @param element Target element
-     * @param options Search configuration
-     *
-     * @returns Array of selectors sorted by ascending penalty
-     * @throws {Error} If no selector can be generated
-     */
-    static findAll(element: HTMLElement, options?: Partial<Uindow_CSS_Config>): Uindow_CSS_Result[];
-}
-export declare const findOne: typeof Uindow_CSS.findOne, findAll: typeof Uindow_CSS.findAll;
-export {};
+export declare const findOne: (element: HTMLElement, options?: Partial<Uindow_CSS_Config>) => Uindow_CSS_Result;
+export declare const findAll: (element: HTMLElement, options?: Partial<Uindow_CSS_Config>) => Uindow_CSS_Result[];
