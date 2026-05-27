@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 /**
- * Configuration options for the CSS selector generator.
+ * Configuration options for the CSS selector generator
  */
 export interface Uindow_CSS_Config {
     /**
@@ -31,7 +31,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML ID attribute may be used in a selector.
      * Defaults to allowing all IDs.
      */
-    idNameFilter: (name: string) => boolean;
+    idFilter: (name: string) => boolean;
     /**
      * Penalty applied to id selectors.
      * Example: `#id`
@@ -45,7 +45,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML tag name may be used in a selector.
      * Defaults to allowing all tags.
      */
-    tagNameFilter: (name: string) => boolean;
+    tagFilter: (name: string) => boolean;
     /**
      * Penalty applied to tag selectors.
      * Example: `div`
@@ -59,7 +59,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether a CSS class name may be used in a selector.
      * Defaults to disallowing `is-*|has-*|js-*|css-*` classes.
      */
-    classNameFilter: (name: string) => boolean;
+    classFilter: (name: string) => boolean;
     /**
      * Penalty applied to class name selectors.
      * Example: `.button`
@@ -150,9 +150,10 @@ export interface Uindow_CSS_Config {
      */
     maxResults: number;
     /**
-     * Percentage of CSS selectors that match the target element first, while potentially
-     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
-     * match the target element exclusively.
+     * Trade exclusivity for shorter selectors.
+     * Fuzziness defines the percentage of CSS selectors that match the target element first,
+     * while potentially also matching additional elements on the page.
+     * Set to `0` to ensure CSS selectors match the target element exclusively.
      *
      * A higher value tends to yield shorter CSS selectors.
      *
@@ -169,11 +170,11 @@ export interface Uindow_CSS_Config {
     timeout: number;
 }
 /**
- * Document root.
+ * Document root
  */
 export type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
 /**
- * CSS selector node.
+ * CSS selector node
  */
 export interface Uindow_CSS_Node {
     /**
@@ -191,19 +192,19 @@ export interface Uindow_CSS_Node {
     level: number;
 }
 /**
- * CSS selector path.
+ * CSS selector path
  */
 export type Uindow_CSS_Path = Uindow_CSS_Node[];
 /**
- * CSS selector.
+ * CSS selector result
  */
 export interface Uindow_CSS_Result {
     /**
-     * Full CSS selector.
+     * Full CSS selector
      */
     selector: string;
     /**
-     * CSS selector penalty - the lower, the better.
+     * CSS selector penalty - the lower, the better
      */
     penalty: number;
 }

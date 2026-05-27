@@ -46,7 +46,7 @@ const filePrepend = (filePath, text) => {
     // Append the rest of the file
     do {
         const bytesRead = fs.readSync(readFd, buffer, 0, bufferSize, null);
-        if (bytesRead < 1) {
+        if (1 > bytesRead) {
             break;
         }
 
@@ -65,7 +65,7 @@ const filePrepend = (filePath, text) => {
     const startTime = performance.now();
     const rootPath = path.dirname(__dirname);
 
-    const copyrightYear = new Date().getFullYear() > 2026 ? `2026-${new Date().getFullYear()}` : 2026;
+    const copyrightYear = 2026 < new Date().getFullYear() ? `2026-${new Date().getFullYear()}` : 2026;
     const copyright = `
 Uindow's CSS Selector Generator
 
@@ -87,8 +87,13 @@ limitations under the License.`.trim();
     // Prepare exports
     const outputs = [
         {
-            // Npm: @uindow/css
+            // Npm: Common JS
             file: "index.js",
+            config: { format: "cjs" }
+        },
+        {
+            // Npm: Module
+            file: "index.mjs",
             config: { format: "esm" }
         },
         {

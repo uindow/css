@@ -18,7 +18,7 @@
  */
 
 /**
- * Configuration options for the CSS selector generator.
+ * Configuration options for the CSS selector generator
  */
 export interface Uindow_CSS_Config {
     /**
@@ -33,7 +33,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML ID attribute may be used in a selector.
      * Defaults to allowing all IDs.
      */
-    idNameFilter: (name: string) => boolean;
+    idFilter: (name: string) => boolean;
 
     /**
      * Penalty applied to id selectors.
@@ -49,7 +49,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML tag name may be used in a selector.
      * Defaults to allowing all tags.
      */
-    tagNameFilter: (name: string) => boolean;
+    tagFilter: (name: string) => boolean;
 
     /**
      * Penalty applied to tag selectors.
@@ -65,7 +65,7 @@ export interface Uindow_CSS_Config {
      * Function that decides whether a CSS class name may be used in a selector.
      * Defaults to disallowing `is-*|has-*|js-*|css-*` classes.
      */
-    classNameFilter: (name: string) => boolean;
+    classFilter: (name: string) => boolean;
 
     /**
      * Penalty applied to class name selectors.
@@ -168,9 +168,10 @@ export interface Uindow_CSS_Config {
     maxResults: number;
 
     /**
-     * Percentage of CSS selectors that match the target element first, while potentially
-     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
-     * match the target element exclusively.
+     * Trade exclusivity for shorter selectors.
+     * Fuzziness defines the percentage of CSS selectors that match the target element first,
+     * while potentially also matching additional elements on the page.
+     * Set to `0` to ensure CSS selectors match the target element exclusively.
      *
      * A higher value tends to yield shorter CSS selectors.
      *
@@ -189,12 +190,12 @@ export interface Uindow_CSS_Config {
 }
 
 /**
- * Document root.
+ * Document root
  */
 export type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
 
 /**
- * CSS selector node.
+ * CSS selector node
  */
 export interface Uindow_CSS_Node {
     /**
@@ -215,21 +216,21 @@ export interface Uindow_CSS_Node {
 }
 
 /**
- * CSS selector path.
+ * CSS selector path
  */
 export type Uindow_CSS_Path = Uindow_CSS_Node[];
 
 /**
- * CSS selector.
+ * CSS selector result
  */
 export interface Uindow_CSS_Result {
     /**
-     * Full CSS selector.
+     * Full CSS selector
      */
     selector: string;
 
     /**
-     * CSS selector penalty - the lower, the better.
+     * CSS selector penalty - the lower, the better
      */
     penalty: number;
 }
@@ -417,22 +418,20 @@ class Uindow_CSS {
         }
 
         const config = {} as Uindow_CSS_Config;
-
-        // Sanitize inputs
         config.root = options.root instanceof HTMLElement ? options.root : document.documentElement;
-        config.idNameFilter = "function" === typeof options.idNameFilter ? options.idNameFilter : () => true;
-        config.tagNameFilter = "function" === typeof options.tagNameFilter ? options.tagNameFilter : () => true;
-        config.classNameFilter =
-            "function" === typeof options.classNameFilter
-                ? options.classNameFilter
-                : (n: string) => !n.match(/^(is-|has-|js-|css-)/);
+
+        // Sanitize filters
+        config.idFilter = "function" === typeof options.idFilter ? options.idFilter : () => true;
+        config.tagFilter = "function" === typeof options.tagFilter ? options.tagFilter : () => true;
+        config.classFilter =
+            "function" === typeof options.classFilter ? options.classFilter : (n: string) => !n.match(/^(is-|has-|js-|css-)/);
         config.attrFilter =
             "function" === typeof options.attrFilter
                 ? options.attrFilter
                 : (n: string, v: string) => !/(?:width|height|style)$/i.test(n) && 32 >= v.length && !/^(?:\w+:)?\/\/?/i.test(v);
 
-        // Default integers
-        const integers: Record<string, number> = {
+        // Sanitize integers
+        const integers: Partial<Uindow_CSS_Config> = {
             lengthPenaltyThreshold: 32,
             maxCandidatesPerLevel: 2500,
             maxPathsPerLevel: 50,
@@ -442,12 +441,13 @@ class Uindow_CSS {
             timeout: 1500
         };
         for (const key of Object.keys(integers) as (keyof typeof integers)[]) {
-            const val = (options as Record<string, unknown>)[key];
-            (config as unknown as Record<string, number>)[key] = Number.isInteger(val) ? Math.abs(val as number) : integers[key];
+            (config as unknown as Record<string, unknown>)[key] = Number.isInteger(options[key])
+                ? Math.abs(options[key] as number)
+                : integers[key];
         }
 
-        // Default floats
-        const floats: Record<string, number> = {
+        // Sanitize floats
+        const floats: Partial<Uindow_CSS_Config> = {
             idPenalty: 1,
             tagPenalty: 1.1,
             classPenalty: 1.3,
@@ -457,8 +457,9 @@ class Uindow_CSS {
             nthChildPenalty: 6
         };
         for (const key of Object.keys(floats) as (keyof typeof floats)[]) {
-            const val = (options as Record<string, unknown>)[key];
-            (config as unknown as Record<string, number>)[key] = Number.isFinite(val) ? Math.abs(val as number) : floats[key];
+            (config as unknown as Record<string, unknown>)[key] = Number.isFinite(options[key])
+                ? Math.abs(options[key] as number)
+                : floats[key];
         }
 
         return config;
@@ -532,7 +533,7 @@ class Uindow_CSS {
     }
 
     /**
-     * Recursively tries dropping intermediate nodes from a path to produce
+     * Recursively drop intermediate nodes from a path to produce
      * shorter selectors that still uniquely match `element`.
      *
      * @param path    Current path
@@ -567,26 +568,26 @@ class Uindow_CSS {
 
     /**
      * Build a path (an array of nodes) for the current element.
-     * Covers id, classes, attributes, tag, nth-of-type, and nth-child.
+     * Cover id, classes, attributes, tag, nth-of-type, and nth-child.
      *
      * @param element Target element
      * @param config  Configuration object
      * @param level   Current level
      *
-     * @returns Array of nodes for this element
+     * @returns Path for this element
      */
     static #path(element: HTMLElement, config: Uindow_CSS_Config, level = 0): Uindow_CSS_Path {
         const path: Uindow_CSS_Path = [];
 
         // ID
         const elementId = element.getAttribute("id");
-        if (elementId && config.idNameFilter(elementId)) {
+        if (elementId && config.idFilter(elementId)) {
             path.push({ compound: "#" + CSS.escape(elementId), penalty: config.idPenalty, level });
         }
 
         // Tag
         const tag = element.tagName.toLowerCase();
-        if (config.tagNameFilter(tag)) {
+        if (config.tagFilter(tag)) {
             path.push({ compound: tag, penalty: config.tagPenalty, level });
 
             // tag:nth-of-type()
@@ -652,7 +653,7 @@ class Uindow_CSS {
         // Classes
         const classSelectors: string[] = [];
         for (let i = 0; i < element.classList.length; i++) {
-            if (config.classNameFilter(element.classList[i])) {
+            if (config.classFilter(element.classList[i])) {
                 const selector = `.${CSS.escape(element.classList[i])}`;
                 classSelectors.push(selector);
                 path.push({ compound: selector, penalty: config.classPenalty, level });
@@ -710,7 +711,7 @@ class Uindow_CSS {
      * Build a full (complex) CSS selector from a list of nodes
      * that contain compound CSS selectors.
      *
-     * @param path Array of nodes
+     * @param path Path
      *
      * @returns Full CSS selector
      */
@@ -749,7 +750,7 @@ class Uindow_CSS {
     }
 
     /**
-     * Get the position of `element` among its siblings, optionally filtered
+     * Get the position of element among its siblings, optionally filtered
      * to siblings matching `filterTag`.
      *
      * @param element   Target element
@@ -773,7 +774,7 @@ class Uindow_CSS {
         while (child) {
             if (
                 Node.ELEMENT_NODE === child.nodeType &&
-                ("undefined" === typeof filterTag || (child as HTMLElement).tagName.toLowerCase() === filterTag)
+                ("string" !== typeof filterTag || (child as HTMLElement).tagName.toLowerCase() === filterTag)
             ) {
                 index++;
             }
@@ -789,16 +790,16 @@ class Uindow_CSS {
     }
 
     /**
-     * Returns true if the element matches the CSS selector described by nodes.
+     * Check whether element matches the CSS selector described by nodes.
      *
-     *  * If `config.fuzziness` is `0`, return true if element is the only match.
-     *  * If `config.fuzziness` is `100`, return true if element is the first match.
+     *  * If `config.fuzziness` is `0`, always return true if element is the only match.
+     *  * If `config.fuzziness` is `100`, always return true if element is the first match.
      *
-     * Using an intermediary value shifts the strategy probabilistically between the two.
+     * Using an intermediate value causes the strategy to switch probabilistically between the two.
      *
      * @param element Target element
      * @param config  Configuration object
-     * @param path    Array of nodes
+     * @param path    Path
      * @param root    Document root
      *
      * @returns Whether the element matches the path

@@ -4,7 +4,19 @@
     "description": "CSS Selector Generator",
     "type": "module",
     "main": "index.js",
+    "module": "index.mjs",
     "types": "types/index.d.ts",
+    "exports": {
+        ".": {
+            "require": "./index.js",
+            "import": "./index.mjs"
+        }
+    },
+    "files": [
+        "index.js",
+        "index.mjs",
+        "types/index.d.ts"
+    ],
     "license": "Apache-2.0",
     "author": "Mark Jivko <mark@uindow.com> (https://uindow.com)",
     "homepage": "https://uindow.com",
@@ -15,8 +27,8 @@
         "uindow"
     ],
     "scripts": {
-        "format": "prettier --write **/*.ts",
-        "lint": "eslint --fix --cache \"{lib,tools,src,test}/**/*.ts\"",
+        "format": "prettier --write \"{src,types}/**/*.ts\"",
+        "lint": "eslint --fix --cache \"src/**/*.ts\"",
         "build": "npm run lint && tsc && npm run format && node ./tools/build.cjs"
     },
     "devDependencies": {
@@ -31,9 +43,5 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/uindow/css.git"
-    },
-    "files": [
-        "index.js",
-        "types/index.d.ts"
-    ]
+    }
 }
