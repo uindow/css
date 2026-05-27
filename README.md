@@ -1,6 +1,10 @@
-# @uindow/css
+# @uindow/css - The Smarter CSS Selector Generator
 
-### The Smarter CSS Selector Generator
+<p align="center">
+    <a href="https://uindow.com/?ref=github">
+        <img src="https://uindow.github.io/img/github-banner-css.png"/>
+    </a>
+</p>
 
 Generate one - or many - unique CSS selectors for any DOM element. Clean, human-readable output. A configurable penalty model that ranks results from most semantic to most specific. Built for performance, designed to stay out of your way.
 
