@@ -66,19 +66,19 @@ Most CSS selector generators treat the problem as a lookup: walk up the DOM, fin
 | Feature | **@uindow/css** | medv/finder |
 |---|---|---|
 | **Custom root element** | ✅ Any `HTMLElement`, `Document`, or `ShadowRoot` | ✅ Supported |
-| **ID filter** | ✅ Custom `idFilter` filter | ✅ Custom `idName` filter |
-| **Tag filter** | ✅ Custom `tagFilter` filter | ✅ Custom `tagName` filter |
+| **ID filter** | ✅ `idFilter` filter | ✅ `idName` filter |
+| **Tag filter** | ✅ `tagFilter` filter | ✅ `tagName` filter |
 | **Class filter** | ✅ Excludes `is-*`, `has-*`, `js-*`, `css-*` by default | ⚠️ Less opinionated defaults |
 | **Attribute filter** | ✅ Excludes `style`, `width`, `height`, URLs, values ≥ 32 chars by default | ⚠️ Less opinionated defaults |
 | **Search timeout** | ✅ `timeout` with graceful fallback | ⚠️ May quit before an exhaustive search |
 | **Returns multiple selectors** | ✅ Up to `maxResults`, ranked by penalty | ❌ Single selector only |
-| **Human-readable attribute selectors** | ✅ Always emits `[attr="123"]` | ❌ Uses `CSS.escape()` |
-| **Per-type penalty tuning** | ✅ IDs, tags, classes, attrs, prefix/suffix, nth-of-type, nth-child | ❌ Not configurable |
+| **Per-type penalty tuning** | ✅ `idPenalty`, `tagPenalty`, `attrPenalty`, `attrMatchPenalty`, `classPenalty`, `nthOfTypePenalty`, `nthChildPenalty`, `lengthPenaltyThreshold` | ❌ Not configurable |
 | **Candidate/path caps** | ✅ `maxCandidatesPerLevel`, `maxPathsPerLevel`, `maxPathsTotal` | ❌ Not supported |
 | **Prefix/suffix attribute matching** | ✅ `[attr^="start"]`, `[attr$="end"]` | ❌ Not supported |
+| **Human-readable attribute selectors** | ✅ Always emits `[attr="123"]` | ❌ Uses `CSS.escape()` |
 | **Length penalty** | ✅ `lengthPenaltyThreshold` | ❌ Not supported |
-| **Fuzziness** | ✅ Trade exclusivity for shorter selectors | ❌ Not supported |
-| **Compound selectors by default** | ✅ Attempts to merge tag, classes, and attributes at each level - `input.check[type="checkbox"][value="2"]` | ❌ Simple selectors only |
+| **Fuzziness** | ✅  Trade exclusivity for shorter selectors (`0%` to `100%`) | ❌ Not supported |
+| **Compound selectors** | ✅ Attempts to merge tag, classes, and attributes at each level: `input.check[type="checkbox"][value="2"]` | ❌ Simple selectors only |
 
 ---
 
