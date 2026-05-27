@@ -1,6 +1,6 @@
 {
     "name": "@uindow/css",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "description": "CSS Selector Generator",
     "type": "module",
     "main": "index.js",
@@ -16,8 +16,8 @@
     ],
     "scripts": {
         "format": "prettier --write **/*.ts",
-        "build": "tsc && node ./tools/build.js",
-        "lint": "eslint --fix --cache \"{lib,tools,src,test}/**/*.ts\""
+        "lint": "eslint --fix --cache \"{lib,tools,src,test}/**/*.ts\"",
+        "build": "npm run lint && tsc && npm run format && node ./tools/build.cjs"
     },
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "8.60.0",

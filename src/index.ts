@@ -24,32 +24,33 @@ export interface Uindow_CSS_Config {
     /**
      * The root element to search from. Selectors will be built relative to this
      * element; nothing above it will appear in any generated selector.
+     *
      * @default document.documentElement
      */
     root: HTMLElement | Document;
 
     /**
-     * Predicate that decides whether an HTML ID attribute may be used in a selector.
+     * Function that decides whether an HTML ID attribute may be used in a selector.
      * Defaults to allowing all IDs.
      */
     idName: (name: string) => boolean;
 
     /**
-     * Predicate that decides whether an HTML tag name may be used in a selector.
+     * Function that decides whether an HTML tag name may be used in a selector.
      * Defaults to allowing all tags.
      */
     tagName: (name: string) => boolean;
 
     /**
-     * Predicate that decides whether a CSS class name may be used in a selector.
+     * Function that decides whether a CSS class name may be used in a selector.
      * Defaults to disallowing `is-*|has-*|js-*|css-*` classes.
      */
     className: (name: string) => boolean;
 
     /**
-     * Predicate that decides whether an attribute `(name, value)` pair may be used
+     * Function that decides whether an attribute `(name, value)` pair may be used
      * in a selector. Defaults to allowing any attribute except `*style|*width|*height`
-     * that is shorter than 32 characters and not a URL.
+     * that is shorter than 32 characters, and not a URL.
      */
     attr: (name: string, value: string) => boolean;
 
@@ -57,67 +58,108 @@ export interface Uindow_CSS_Config {
      * Maximum time in milliseconds to spend searching before giving up and
      * returning however many results have been found so far (or the nth-of-type
      * fallback if none were found).
+     *
      * @default 1500
      */
     timeout: number;
 
     /**
-     * Percentage of CSS selectors that are fuzzy i.e. they yield a list of multiple
-     * elements, and the first element is our target. Set to `0` so that CSS selectors
-     * match our target element uniquely.
+     * Percentage of CSS selectors that match the target element first, while potentially
+     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
+     * match the target element exclusively.
+     *
+     * A higher value tends to yield shorter CSS selectors.
+     *
      * @default 5
      */
     fuzziness: number;
 
     /**
-     * Penalize CSS selectors that have more than this number of characters.
+     * Apply a penalty to CSS selectors whose length exceeds this number of characters.
+     *
+     * A lower value tends to yield shorter CSS selectors.
+     *
      * @default 32
      */
-    lengthPenalty: number;
-
-    /**
-     * Hard cap on the number of unique paths yielded in total.
-     * Useful for very deep or very wide DOMs where the search space is large.
-     * @default 1000
-     */
-    maxPathsTotal: number;
-
-    /**
-     * Hard cap on the number of unique paths yielded per level.
-     * Useful for very deep or very wide DOMs where the search space is large.
-     * @default 50
-     */
-    maxPathsPerLevel: number;
+    startLengthPenalty: number;
 
     /**
      * Hard cap on the number of candidates yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
+     *
      * @default 2500
      */
     maxCandidatesPerLevel: number;
 
     /**
-     * Maximum number of unique selectors to return, ordered from lowest penalty
-     * (shortest / most semantic) to highest (longest / nth-child fallback).
+     * Hard cap on the number of unique paths yielded per level.
+     * Useful for very deep or very wide DOMs where the search space is large.
+     *
+     * @default 50
+     */
+    maxPathsPerLevel: number;
+
+    /**
+     * Hard cap on the number of unique paths yielded in total.
+     * Useful for very deep or very wide DOMs where the search space is large.
+     *
+     * This value should always be lower than `maxResults`.
+     *
+     * @default 1000
+     */
+    maxPathsTotal: number;
+
+    /**
+     * Maximum number of distinct selectors to return, sorted by increasing penalty.
+     *
      * @default 25
      */
     maxResults: number;
 }
 
 /**
- * CSS selector node
+ * Document root.
+ */
+export type Uindow_CSS_Root = Document | ShadowRoot | HTMLElement;
+
+/**
+ * CSS selector node.
  */
 export interface Uindow_CSS_Node {
-    name: string;
-    level: number;
+    /**
+     * Compound CSS selector for this node.
+     * Multiple nodes are merged to form the final (complex) CSS selector.
+     */
+    compound: string;
+
+    /**
+     * CSS selector penalty - the lower, the better.
+     */
     penalty: number;
+
+    /**
+     * Node level starting at `0` for the target element, incremented with each ancestor.
+     */
+    level: number;
 }
 
 /**
- * CSS selector result
+ * CSS selector path.
+ */
+export type Uindow_CSS_Path = Uindow_CSS_Node[];
+
+/**
+ * CSS selector.
  */
 export interface Uindow_CSS_Result {
+    /**
+     * Full CSS selector.
+     */
     selector: string;
+
+    /**
+     * CSS selector penalty - the lower, the better.
+     */
     penalty: number;
 }
 
@@ -137,10 +179,10 @@ class Uindow_CSS {
     static readonly #PENALTY_NTH_CHILD = 6;
 
     /**
-     * Returns the single best CSS selector string.
+     * Return the single best CSS selector for the target element.
      *
      * @param element Target element
-     * @param options Optional configuration
+     * @param options Search configuration
      *
      * @returns The best matching selector with its penalty score
      * @throws {Error} If no selector can be generated
@@ -158,29 +200,28 @@ class Uindow_CSS {
      * lowest penalty (shortest / most semantic) to highest (longest / nth-child).
      *
      * @param element Target element
-     * @param options Optional configuration
+     * @param options Search configuration
      *
      * @returns Array of selectors sorted by ascending penalty
      * @throws {Error} If no selector can be generated
      */
     static findAll(element: HTMLElement, options: Partial<Uindow_CSS_Config> = {}): Uindow_CSS_Result[] {
-        const startTime = performance.now();
-
         // Invalid element
         if (Node.ELEMENT_NODE !== element?.nodeType) {
-            throw new Error("Cannot generate CSS selector for this element");
+            throw new Error("Cannot generate a CSS selector for this element");
         }
 
-        // Can't go up
+        // Reached the ceiling
         if ("html" === element.tagName.toLowerCase()) {
             return [{ selector: "html", penalty: 0 }];
         }
 
         // Sanitize configuration options
         const config = Uindow_CSS.#config(options);
+        const startTime = performance.now();
 
         // Prepare the root
-        const root = ((): Document | ShadowRoot | HTMLElement => {
+        const root = ((): Uindow_CSS_Root => {
             const shadowRoot = element.getRootNode?.();
 
             if ("ShadowRoot" === shadowRoot?.constructor?.name) {
@@ -194,11 +235,11 @@ class Uindow_CSS {
             return (config.root as HTMLElement).ownerDocument ?? config.root;
         })();
 
-        // Count paths per level
+        // Limit the number candidates per level
         const pathsPerLevel: Record<number, number> = {};
 
-        // Collect candidate paths from the search generator
-        const candidates: Uindow_CSS_Node[][] = [];
+        // Collect candidate paths
+        const candidates: Uindow_CSS_Path[] = [];
         for (const { candidate, level } of Uindow_CSS.#find(element, config, root)) {
             if (performance.now() - startTime > config.timeout) {
                 break;
@@ -230,7 +271,32 @@ class Uindow_CSS {
 
         // Fallback: if the generator produced nothing, use a full nth-of-type chain
         if (0 === candidates.length) {
-            const fallbackPath = Uindow_CSS.#fallback(element, config, root);
+            const fallbackPath = (() => {
+                const path: Uindow_CSS_Path = [];
+
+                let level = 0;
+                let current: HTMLElement | null = element;
+                while (current && current !== root) {
+                    const tag = current.tagName.toLowerCase();
+                    const index = Uindow_CSS.#indexOf(current, tag);
+
+                    // Out of DOM
+                    if (-1 === index) {
+                        return [];
+                    }
+
+                    path.push({
+                        compound: `${tag}:nth-of-type(${index})`,
+                        penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE,
+                        level
+                    });
+
+                    current = current.parentElement;
+                    level++;
+                }
+
+                return Uindow_CSS.#matches(element, config, path, root) ? path : [];
+            })();
             if (!fallbackPath.length) {
                 throw new Error("No fallback CSS selector was not found");
             }
@@ -238,30 +304,33 @@ class Uindow_CSS {
             return [
                 {
                     selector: Uindow_CSS.#selector(fallbackPath),
-                    penalty: Uindow_CSS.#penalty(fallbackPath, config.lengthPenalty)
+                    penalty: Uindow_CSS.#penalty(fallbackPath, config.startLengthPenalty)
                 }
             ];
         }
 
-        const seen = new Set<string>();
-        const selectors: Uindow_CSS_Result[] = [];
+        // Prepare the results
+        const results: Uindow_CSS_Result[] = [];
 
-        const append = (path: Uindow_CSS_Node[]): void => {
-            const css = Uindow_CSS.#selector(path);
-            if (seen.has(css)) {
+        // Hashmap of unique selectors
+        const selectors = new Set<string>();
+        const append = (path: Uindow_CSS_Path): void => {
+            const selector = Uindow_CSS.#selector(path);
+            if (!selector || selectors.has(selector)) {
                 return;
             }
 
-            seen.add(css);
-            selectors.push({ selector: css, penalty: Uindow_CSS.#penalty(path, config.lengthPenalty) });
+            selectors.add(selector);
+            results.push({ selector, penalty: Uindow_CSS.#penalty(path, config.startLengthPenalty) });
         };
 
+        // Walk through the candidates
         treatRaw: for (const candidate of candidates) {
             for (const path of Uindow_CSS.#optimize(candidate, element, config, root)) {
                 append(path);
 
                 // Wider base
-                if (selectors.length >= config.maxResults * 25) {
+                if (results.length >= config.maxResults * 25) {
                     break treatRaw;
                 }
             }
@@ -270,15 +339,16 @@ class Uindow_CSS {
         }
 
         // Sort by penalty
-        selectors.sort((a, b) => a.penalty - b.penalty);
+        results.sort((a, b) => a.penalty - b.penalty);
 
-        return selectors.slice(0, config.maxResults);
+        return results.slice(0, config.maxResults);
     }
 
     /**
      * Sanitize configuration options.
      *
      * @param options Unsanitized options object
+     *
      * @returns Sanitized config
      */
     static #config(options: Partial<Uindow_CSS_Config> = {}): Uindow_CSS_Config {
@@ -303,7 +373,7 @@ class Uindow_CSS {
         const integers: Record<string, number> = {
             timeout: 1500,
             fuzziness: 5,
-            lengthPenalty: 32,
+            startLengthPenalty: 32,
             maxPathsTotal: 1000,
             maxPathsPerLevel: 50,
             maxCandidatesPerLevel: 2500,
@@ -322,27 +392,28 @@ class Uindow_CSS {
      * Generator that walks the DOM upward from `element`, yielding candidate
      * paths (arrays of nodes) sorted by ascending penalty at each depth level.
      *
-     * @param element - Target element
-     * @param config - Configuration object
-     * @param root - Document root
+     * @param element Target element
+     * @param config  Configuration object
+     * @param root    Document root
+     *
      * @returns Generator of candidate paths with their level
      */
     static *#find(
         element: HTMLElement,
         config: Uindow_CSS_Config,
-        root: Document | ShadowRoot | HTMLElement
+        root: Uindow_CSS_Root
     ): Generator<{
-        candidate: Uindow_CSS_Node[];
+        candidate: Uindow_CSS_Path;
         level: number;
     }> {
         let curr: HTMLElement | null = element;
         let level = 0;
 
         function* combine(
-            paths: Uindow_CSS_Node[][],
-            path: Uindow_CSS_Node[] = [],
+            paths: Uindow_CSS_Path[],
+            path: Uindow_CSS_Path = [],
             counter: { count: number } = { count: 0 }
-        ): Generator<Uindow_CSS_Node[]> {
+        ): Generator<Uindow_CSS_Path> {
             if (counter.count >= config.maxCandidatesPerLevel) {
                 return;
             }
@@ -362,13 +433,15 @@ class Uindow_CSS {
             }
         }
 
-        const stack: Uindow_CSS_Node[][] = [];
+        const pathList: Uindow_CSS_Path[] = [];
         while (curr && curr !== root) {
-            stack.push(Uindow_CSS.#path(curr, config, level));
+            pathList.push(Uindow_CSS.#path(curr, config, level));
 
             // Prepare path
-            const path = [...combine(stack)];
-            path.sort((a, b) => Uindow_CSS.#penalty(a, config.lengthPenalty) - Uindow_CSS.#penalty(b, config.lengthPenalty));
+            const path = [...combine(pathList)];
+            path.sort(
+                (a, b) => Uindow_CSS.#penalty(a, config.startLengthPenalty) - Uindow_CSS.#penalty(b, config.startLengthPenalty)
+            );
 
             // Yield candidates one by one
             for (const candidate of path) {
@@ -385,18 +458,19 @@ class Uindow_CSS {
      * Recursively tries dropping intermediate nodes from a path to produce
      * shorter selectors that still uniquely match `element`.
      *
-     * @param path - Current path
-     * @param element - Target element
-     * @param config - Configuration object
-     * @param root - Document root
+     * @param path    Current path
+     * @param element Target element
+     * @param config  Configuration object
+     * @param root    Document root
+     *
      * @returns Generator of optimized paths
      */
     static *#optimize(
-        path: Uindow_CSS_Node[],
+        path: Uindow_CSS_Path,
         element: HTMLElement,
         config: Uindow_CSS_Config,
-        root: Document | ShadowRoot | HTMLElement
-    ): Generator<Uindow_CSS_Node[]> {
+        root: Uindow_CSS_Root
+    ): Generator<Uindow_CSS_Path> {
         if (2 >= path.length) {
             return;
         }
@@ -415,38 +489,39 @@ class Uindow_CSS {
     }
 
     /**
-     * Build a path for the current element.
+     * Build a path (an array of nodes) for the current element.
      * Covers id, classes, attributes, tag, nth-of-type, and nth-child.
      *
-     * @param element - Target element
-     * @param config - Configuration object
-     * @param level - Current level
-     * @returns Array of candidate nodes for this element
+     * @param element Target element
+     * @param config  Configuration object
+     * @param level   Current level
+     *
+     * @returns Array of nodes for this element
      */
-    static #path(element: HTMLElement, config: Uindow_CSS_Config, level = 0): Uindow_CSS_Node[] {
-        const nodes: Uindow_CSS_Node[] = [];
+    static #path(element: HTMLElement, config: Uindow_CSS_Config, level = 0): Uindow_CSS_Path {
+        const path: Uindow_CSS_Path = [];
 
         // ID
         const elementId = element.getAttribute("id");
         if (elementId && config.idName(elementId)) {
-            nodes.push({ name: "#" + CSS.escape(elementId), penalty: Uindow_CSS.#PENALTY_ID, level });
+            path.push({ compound: "#" + CSS.escape(elementId), penalty: Uindow_CSS.#PENALTY_ID, level });
         }
 
         // Tag
         const tag = element.tagName.toLowerCase();
         if (config.tagName(tag)) {
-            nodes.push({ name: tag, penalty: Uindow_CSS.#PENALTY_TAG, level });
+            path.push({ compound: tag, penalty: Uindow_CSS.#PENALTY_TAG, level });
 
             // tag:nth-of-type()
             const idxOfType = Uindow_CSS.#indexOf(element, tag);
             if (-1 !== idxOfType) {
-                nodes.push({ name: `${tag}:nth-of-type(${idxOfType})`, penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE, level });
+                path.push({ compound: `${tag}:nth-of-type(${idxOfType})`, penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE, level });
             }
 
             // :nth-child()
             const nthIdx = Uindow_CSS.#indexOf(element);
             if (-1 !== nthIdx) {
-                nodes.push({ name: `:nth-child(${nthIdx})`, penalty: Uindow_CSS.#PENALTY_NTH_CHILD, level });
+                path.push({ compound: `:nth-child(${nthIdx})`, penalty: Uindow_CSS.#PENALTY_NTH_CHILD, level });
             }
         }
 
@@ -464,11 +539,11 @@ class Uindow_CSS {
 
             // Prepare the combinations
             for (let i = 0; i < end; i++) {
-                nodes.push({ name: `${tag}${items[i]}`, penalty, level });
+                path.push({ compound: `${tag}${items[i]}`, penalty, level });
                 for (let j = i + 1; j < end; j++) {
                     const selector = `${items[i]}${items[j]}`;
-                    nodes.push({ name: selector, penalty, level });
-                    nodes.push({ name: `${tag}${selector}`, penalty, level });
+                    path.push({ compound: selector, penalty, level });
+                    path.push({ compound: `${tag}${selector}`, penalty, level });
                 }
             }
         };
@@ -490,8 +565,8 @@ class Uindow_CSS {
                 for (let j = i + 1; j < end; j++) {
                     for (let k = j + 1; k < end; k++) {
                         const selector = `${items[i]}${items[j]}${items[k]}`;
-                        nodes.push({ name: selector, penalty, level });
-                        nodes.push({ name: `${tag}${selector}`, penalty, level });
+                        path.push({ compound: selector, penalty, level });
+                        path.push({ compound: `${tag}${selector}`, penalty, level });
                     }
                 }
             }
@@ -503,7 +578,7 @@ class Uindow_CSS {
             if (config.className(element.classList[i])) {
                 const selector = `.${CSS.escape(element.classList[i])}`;
                 classSelectors.push(selector);
-                nodes.push({ name: selector, penalty: Uindow_CSS.#PENALTY_CLASS, level });
+                path.push({ compound: selector, penalty: Uindow_CSS.#PENALTY_CLASS, level });
             }
         }
         mergeTwo(classSelectors, Uindow_CSS.#PENALTY_CLASS);
@@ -526,20 +601,20 @@ class Uindow_CSS {
                 // Standard selector
                 const selector = `[${CSS.escape(attrName)}${attrValue.length ? `="${safeValue(attrValue)}"` : ""}]`;
                 attrSelectors.push(selector);
-                nodes.push({ name: selector, penalty: Uindow_CSS.#PENALTY_ATTR, level });
+                path.push({ compound: selector, penalty: Uindow_CSS.#PENALTY_ATTR, level });
 
                 // Prefix match selector
                 const startWord = attrValue.match(/^(\w{2,12})/g);
                 if (startWord && startWord[0].length < attrValue.length) {
                     const startSelector = `[${CSS.escape(attrName)}^="${safeValue(startWord[0])}"]`;
-                    nodes.push({ name: startSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
+                    path.push({ compound: startSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
                 }
 
                 // Suffix match selector
                 const endWord = attrValue.match(/(\w{2,12})$/g);
                 if (endWord && endWord[0].length < attrValue.length) {
                     const endSelector = `[${CSS.escape(attrName)}$="${safeValue(endWord[0])}"]`;
-                    nodes.push({ name: endSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
+                    path.push({ compound: endSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
                 }
             }
         }
@@ -551,71 +626,45 @@ class Uindow_CSS {
             Math.min(Uindow_CSS.#PENALTY_ATTR, Uindow_CSS.#PENALTY_CLASS)
         );
 
-        return nodes;
+        return path;
     }
 
     /**
-     * Last-resort fallback: builds a full nth-of-type chain from `element` to root.
-     *
-     * @param element - Target element
-     * @param config - Configuration object
-     * @param root - Document root
-     * @returns Fallback path — may be empty
-     */
-    static #fallback(
-        element: HTMLElement,
-        config: Uindow_CSS_Config,
-        root: Document | ShadowRoot | HTMLElement
-    ): Uindow_CSS_Node[] {
-        let level = 0;
-        let current: HTMLElement | null = element;
-
-        const nodes: Uindow_CSS_Node[] = [];
-        while (current && current !== root) {
-            const tag = current.tagName.toLowerCase();
-            const index = Uindow_CSS.#indexOf(current, tag);
-            if (-1 === index) {
-                return [];
-            }
-
-            nodes.push({ name: `${tag}:nth-of-type(${index})`, penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE, level });
-
-            current = current.parentElement;
-            level++;
-        }
-
-        return Uindow_CSS.#matches(element, config, nodes, root) ? nodes : [];
-    }
-
-    /**
-     * Builds a CSS selector string from a path.
+     * Build a full (complex) CSS selector from a list of nodes
+     * that contain compound CSS selectors.
      *
      * @param path Array of nodes
-     * @returns CSS selector string
+     *
+     * @returns Full CSS selector
      */
-    static #selector(path: Uindow_CSS_Node[]): string {
+    static #selector(path: Uindow_CSS_Path): string {
+        if (!path.length) {
+            return "";
+        }
+
         let node = path[0];
-        let query = node.name;
+        let selector = node.compound;
 
         for (let i = 1; i < path.length; i++) {
-            const parent = (path[i].level ?? 0) - 1 === node.level;
-            query = `${path[i].name} ${parent ? "> " : ""}${query}`;
+            const isParent = (path[i].level ?? 0) - 1 === node.level;
+            selector = `${path[i].compound} ${isParent ? "> " : ""}${selector}`;
             node = path[i];
         }
 
-        return query;
+        return selector;
     }
 
     /**
-     * Sum of penalties across all nodes in a path.
+     * Calculate penalties across all nodes in a path.
      *
-     * @param path - Array of nodes
-     * @param lengthPenalty - Length penalty threshold
+     * @param path          Path
+     * @param lengthPenalty Length penalty threshold
+     *
      * @returns Total penalty score
      */
-    static #penalty(path: Uindow_CSS_Node[], lengthPenalty = 10): number {
+    static #penalty(path: Uindow_CSS_Path, lengthPenalty = 10): number {
         // Penalty by total length
-        const length = path.reduce((acc, node) => acc + node.name.length, 0);
+        const length = path.reduce((acc, node) => acc + node.compound.length, 0);
         const pLength = length > lengthPenalty ? length / lengthPenalty : 1;
 
         // Round to 3 digits
@@ -626,8 +675,9 @@ class Uindow_CSS {
      * Get the position of `element` among its siblings, optionally filtered
      * to siblings matching `filterTag`.
      *
-     * @param element - Target element
-     * @param filterTag - Optional tag name to filter siblings by
+     * @param element   Target element
+     * @param filterTag Optional tag name to filter siblings by
+     *
      * @returns 1-based position or `-1` if not found
      */
     static #indexOf(element: HTMLElement, filterTag?: string): number {
@@ -669,18 +719,14 @@ class Uindow_CSS {
      *
      * Using an intermediary value shifts the strategy probabilistically between the two.
      *
-     * @param element - Target element
-     * @param config - Configuration object
-     * @param path - Array of nodes
-     * @param root - Document root
+     * @param element Target element
+     * @param config  Configuration object
+     * @param path    Array of nodes
+     * @param root    Document root
+     *
      * @returns Whether the element matches the path
      */
-    static #matches(
-        element: HTMLElement,
-        config: Uindow_CSS_Config,
-        path: Uindow_CSS_Node[],
-        root: Document | ShadowRoot | HTMLElement
-    ): boolean {
+    static #matches(element: HTMLElement, config: Uindow_CSS_Config, path: Uindow_CSS_Path, root: Uindow_CSS_Root): boolean {
         try {
             const domElements = (root as ParentNode).querySelectorAll(Uindow_CSS.#selector(path));
 

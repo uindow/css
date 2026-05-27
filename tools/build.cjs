@@ -1,5 +1,24 @@
+/**
+ * Uindow's CSS Selector Generator
+ *
+ * @architect Mark Jivko <mark@uindow.com>
+ * @copyright © Uindow™ (https://uindow.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 const esbuild = require("esbuild");
 const path = require("path");
+const fs = require("fs");
 
 /**
  * Prepend text to file
@@ -40,7 +59,7 @@ const filePrepend = (filePath, text) => {
     fs.closeSync(writeFd);
 
     // Replace the original file
-    fs.moveSync(filePathTemp, filePath, { overwrite: true });
+    fs.renameSync(filePathTemp, filePath, { overwrite: true });
 };
 
 (async () => {
@@ -64,9 +83,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.`.trim();
 
-    // Build the
+    // Prepare outputs
+    const outputs = [
+        {
+            file: "index.js",
+            config: { format: "esm" }
+        },
+        {
+            file: "dist/selector.js",
+            config: { format: "iife", globalName: "Uindow_CSS" }
+        }
+    ];
+    for (const output of outputs) {
+        await esbuild.build({
+            entryPoints: [path.join(rootPath, "src", "index.ts")],
+            outfile: path.join(rootPath, output.file),
+            target: ["es2020"],
+            minify: true,
+            sourcemap: false,
+            minifySyntax: true,
+            minifyWhitespace: true,
+            minifyIdentifiers: false,
+            legalComments: "none",
+            supported: {
+                "template-literal": false
+            },
+            ...output.config
+        });
+        filePrepend(path.join(rootPath, output.file), "/**\n" + copyright.replace(/^/gm, " * ") + "\n */\n");
+    }
 
-    // filePrepend(path.join(), "/*!\n" + copyright.replace(/^/gm, " * ") + "\n */\n");
-
-    console.log(`  • Added copyright headers in ${performance.now() - startTime}ms`);
+    const logMessage = `Assets exported in ${Math.floor(1000 * (performance.now() - startTime)) / 1000}ms`;
+    console.log(`\n\x1b[32m${logMessage}\x1b[0m\n`);
 })();
