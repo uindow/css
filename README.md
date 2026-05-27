@@ -65,9 +65,9 @@ Most CSS selector generators treat the problem as a lookup: walk up the DOM, fin
 
 ---
 
-## Comparison with `medv/finder`
+## Comparison with `@medv/finder`
 
-| Feature | **@uindow/css** | medv/finder |
+| Feature | **@uindow/css** | **@medv/finder** |
 |---|---|---|
 | **Custom root element** | ✅ Any `HTMLElement`, `Document`, or `ShadowRoot` | ✅ Supported |
 | **ID filter** | ✅ `idFilter` filter | ✅ `idName` filter |
@@ -75,14 +75,13 @@ Most CSS selector generators treat the problem as a lookup: walk up the DOM, fin
 | **Class filter** | ✅ Excludes `is-*`, `has-*`, `js-*`, `css-*` by default | ⚠️ Less opinionated defaults |
 | **Attribute filter** | ✅ Excludes `style`, `width`, `height`, URLs, values ≥ 32 chars by default | ⚠️ Less opinionated defaults |
 | **Search timeout** | ✅ `timeout` with graceful fallback | ⚠️ May quit before an exhaustive search |
-| **Returns multiple selectors** | ✅ Up to `maxResults`, ranked by penalty | ❌ Single selector only |
-| **Per-type penalty tuning** | ✅ `idPenalty`, `tagPenalty`, `attrPenalty`, `attrMatchPenalty`, `classPenalty`, `nthOfTypePenalty`, `nthChildPenalty`, `lengthPenaltyThreshold` | ❌ Not configurable |
-| **Candidate/path caps** | ✅ `maxCandidatesPerLevel`, `maxPathsPerLevel`, `maxPathsTotal` | ❌ Not supported |
-| **Prefix/suffix attribute matching** | ✅ `[attr^="start"]`, `[attr$="end"]` | ❌ Not supported |
-| **Human-readable attribute selectors** | ✅ Always emits `[attr="123"]` | ❌ Uses `CSS.escape()` |
-| **Length penalty** | ✅ `lengthPenaltyThreshold` | ❌ Not supported |
-| **Fuzziness** | ✅  Trade exclusivity for shorter selectors (`0%` to `100%`) | ❌ Not supported |
-| **Compound selectors** | ✅ Attempts to merge tag, classes, and attributes at each level: `input.check[type="checkbox"][value="2"]` | ❌ Simple selectors only |
+| [**Returns multiple selectors**](#multiple-selectors-ranked-by-quality) | ✅ Up to `maxResults`, ranked by penalty | ❌ Single selector only |
+| [**Per-type penalty tuning**](#fine-grained-penalty-model) | ✅ `idPenalty`, `tagPenalty`, `attrPenalty`, `attrMatchPenalty`, `classPenalty`, `nthOfTypePenalty`, `nthChildPenalty`, `lengthPenaltyThreshold` | ❌ Not configurable |
+| [**Candidate/path caps**](#performance-controls) | ✅ `maxCandidatesPerLevel`, `maxPathsPerLevel`, `maxPathsTotal` | ❌ Not supported |
+| [**Prefix/suffix attribute matching**](#prefix-and-suffix-attribute-matching) | ✅ `[attr^="start"]`, `[attr$="end"]` | ❌ Not supported |
+| [**Human-readable attribute selectors**](#clean-human-readable-output) | ✅ Always emits `[attr="123"]` | ❌ Uses `CSS.escape()` |
+| [**Fuzziness**](#fuzziness) | ✅  Trade exclusivity for shorter selectors (`0%` to `100%`) | ❌ Not supported |
+| [**Compound selectors**](#compound-selectors-at-every-level) | ✅ Attempts to merge tag, classes, and attributes at each level: `input.check[type="checkbox"][value="2"]` | ❌ Simple selectors only |
 
 ---
 
