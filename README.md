@@ -2,7 +2,7 @@
 
 <p align="center">
     <a href="https://uindow.com/?ref=github">
-        <img src="https://uindow.github.io/img/github-banner-css.png"/>
+        <img src="https://uindow.github.io/img/github-banner-css.png?v=2"/>
     </a>
 </p>
 
