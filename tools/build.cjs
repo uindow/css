@@ -93,7 +93,7 @@ limitations under the License.`.trim();
         },
         {
             // Web: uindow.github.io/css/selector.js
-            file: "dist/selector.js",
+            file: "docs/selector.js",
             config: { format: "iife", globalName: "Uindow_CSS" }
         }
     ];
