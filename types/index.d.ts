@@ -174,11 +174,11 @@ export interface Uindow_CSS_Config {
  */
 export interface Uindow_CSS_Result {
     /**
-     * Full CSS selector
+     * Optimized CSS selector
      */
     selector: string;
     /**
-     * CSS selector penalty - the lower, the better
+     * CSS selector penalty (the lower, the better)
      */
     penalty: number;
 }

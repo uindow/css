@@ -106,7 +106,6 @@ limitations under the License.`.trim();
         await esbuild.build({
             entryPoints: [path.join(rootPath, "src", "index.ts")],
             outfile: path.join(rootPath, output.file),
-            bundle: true,
             minify: true,
             keepNames: true,
             minifyIdentifiers: false,
