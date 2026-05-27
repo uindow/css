@@ -1,0 +1,39 @@
+{
+    "name": "@uindow/css",
+    "version": "1.0.0",
+    "description": "CSS Selector Generator",
+    "type": "module",
+    "main": "index.js",
+    "types": "types/index.d.ts",
+    "license": "Apache-2.0",
+    "author": "Mark Jivko <mark@uindow.com> (https://uindow.com)",
+    "homepage": "https://uindow.com",
+    "keywords": [
+        "css",
+        "selector",
+        "generator",
+        "uindow"
+    ],
+    "scripts": {
+        "format": "prettier --write **/*.ts",
+        "build": "tsc && node ./tools/build.js",
+        "lint": "eslint --fix --cache \"{lib,tools,src,test}/**/*.ts\""
+    },
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "8.60.0",
+        "esbuild": "0.25.9",
+        "eslint": "8.57.1",
+        "eslint-config-prettier": "8.10.0",
+        "eslint-plugin-prettier": "4.2.1",
+        "prettier": "2.8.8",
+        "typescript": "6.0.3"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/uindow/css.git"
+    },
+    "files": [
+        "index.js",
+        "types/index.d.ts"
+    ]
+}
