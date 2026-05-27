@@ -259,7 +259,7 @@ findAll(el, {
     maxResults:               25,
     timeout:                1500,
 
-    // Quality
+    // Percentage of shorter, first-match selectors
     fuzziness: 5,
 });
 ```
