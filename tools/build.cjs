@@ -2,7 +2,6 @@
  * Uindow's CSS Selector Generator
  *
  * @architect Mark Jivko <mark@uindow.com>
- * @copyright © Uindow™ (https://uindow.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +67,8 @@ const filePrepend = (filePath, text) => {
 
     const copyrightYear = new Date().getFullYear() > 2026 ? `2026-${new Date().getFullYear()}` : 2026;
     const copyright = `
+Uindow's CSS Selector Generator
+
 @architect Mark Jivko <mark@uindow.com>
 @copyright © ${copyrightYear} Uindow™ (https://uindow.com)
 
@@ -83,13 +84,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.`.trim();
 
-    // Prepare outputs
+    // Prepare exports
     const outputs = [
         {
+            // Npm: @uindow/css
             file: "index.js",
             config: { format: "esm" }
         },
         {
+            // Web: uindow.github.io/css/selector.js
             file: "dist/selector.js",
             config: { format: "iife", globalName: "Uindow_CSS" }
         }
@@ -98,16 +101,10 @@ limitations under the License.`.trim();
         await esbuild.build({
             entryPoints: [path.join(rootPath, "src", "index.ts")],
             outfile: path.join(rootPath, output.file),
-            target: ["es2020"],
-            minify: true,
-            sourcemap: false,
-            minifySyntax: true,
-            minifyWhitespace: true,
             minifyIdentifiers: false,
-            legalComments: "none",
-            supported: {
-                "template-literal": false
-            },
+            target: ["es2020"],
+            sourcemap: false,
+            minify: true,
             ...output.config
         });
         filePrepend(path.join(rootPath, output.file), "/**\n" + copyright.replace(/^/gm, " * ") + "\n */\n");

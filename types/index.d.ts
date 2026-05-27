@@ -31,41 +31,87 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML ID attribute may be used in a selector.
      * Defaults to allowing all IDs.
      */
-    idName: (name: string) => boolean;
+    idNameFilter: (name: string) => boolean;
+    /**
+     * Penalty applied to id selectors.
+     * Example: `#id`
+     *
+     * A lower value tends to yield more ID-based CSS selectors.
+     *
+     * @default 1
+     */
+    idPenalty: number;
     /**
      * Function that decides whether an HTML tag name may be used in a selector.
      * Defaults to allowing all tags.
      */
-    tagName: (name: string) => boolean;
+    tagNameFilter: (name: string) => boolean;
+    /**
+     * Penalty applied to tag selectors.
+     * Example: `div`
+     *
+     * A lower value tends to yield more tag-based CSS selectors.
+     *
+     * @default 1.1
+     */
+    tagPenalty: number;
     /**
      * Function that decides whether a CSS class name may be used in a selector.
      * Defaults to disallowing `is-*|has-*|js-*|css-*` classes.
      */
-    className: (name: string) => boolean;
+    classNameFilter: (name: string) => boolean;
+    /**
+     * Penalty applied to class name selectors.
+     * Example: `.button`
+     *
+     * A lower value tends to yield more class-based CSS selectors.
+     *
+     * @default 1.3
+     */
+    classPenalty: number;
     /**
      * Function that decides whether an attribute `(name, value)` pair may be used
      * in a selector. Defaults to allowing any attribute except `*style|*width|*height`
      * that is shorter than 32 characters, and not a URL.
      */
-    attr: (name: string, value: string) => boolean;
+    attrFilter: (name: string, value: string) => boolean;
     /**
-     * Maximum time in milliseconds to spend searching before giving up and
-     * returning however many results have been found so far (or the nth-of-type
-     * fallback if none were found).
+     * Penalty applied to attribute selectors.
+     * Example: `[name]`, `[value="1"]`
      *
-     * @default 1500
+     * A lower value tends to yield more attribute-based CSS selectors.
+     *
+     * @default 1.25
      */
-    timeout: number;
+    attrPenalty: number;
     /**
-     * Percentage of CSS selectors that match the target element first, while potentially
-     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
-     * match the target element exclusively.
+     * Penalty applied to prefix-matched and suffix-matched attribute selectors.
+     * Example: `[name^="x"]`, `[value$="5"]`
      *
-     * A higher value tends to yield shorter CSS selectors.
+     * A lower value tends to yield more CSS selectors that contain
+     * attribute values prefixes or suffixes.
      *
-     * @default 5
+     * @default 1.2
      */
-    fuzziness: number;
+    attrMatchPenalty: number;
+    /**
+     * Penalty applied to nth-of-type selectors.
+     * Example: `div:nth-of-type(1)`
+     *
+     * A lower value tends to yield more nth-of-type CSS selectors.
+     *
+     * @default 3
+     */
+    nthOfTypePenalty: number;
+    /**
+     * Penalty applied to nth-child selectors.
+     * Example: `:nth-child(1)`
+     *
+     * A lower value tends to yield more nth-child CSS selectors.
+     *
+     * @default 6
+     */
+    nthChildPenalty: number;
     /**
      * Apply a penalty to CSS selectors whose length exceeds this number of characters.
      *
@@ -73,7 +119,7 @@ export interface Uindow_CSS_Config {
      *
      * @default 32
      */
-    startLengthPenalty: number;
+    lengthPenaltyThreshold: number;
     /**
      * Hard cap on the number of candidates yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
@@ -103,6 +149,24 @@ export interface Uindow_CSS_Config {
      * @default 25
      */
     maxResults: number;
+    /**
+     * Percentage of CSS selectors that match the target element first, while potentially
+     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
+     * match the target element exclusively.
+     *
+     * A higher value tends to yield shorter CSS selectors.
+     *
+     * @default 5
+     */
+    fuzziness: number;
+    /**
+     * Maximum time in milliseconds to spend searching before giving up and
+     * returning however many results have been found so far (or the nth-of-type
+     * fallback if none were found).
+     *
+     * @default 1500
+     */
+    timeout: number;
 }
 /**
  * Document root.

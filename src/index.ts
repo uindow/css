@@ -33,46 +33,97 @@ export interface Uindow_CSS_Config {
      * Function that decides whether an HTML ID attribute may be used in a selector.
      * Defaults to allowing all IDs.
      */
-    idName: (name: string) => boolean;
+    idNameFilter: (name: string) => boolean;
+
+    /**
+     * Penalty applied to id selectors.
+     * Example: `#id`
+     *
+     * A lower value tends to yield more ID-based CSS selectors.
+     *
+     * @default 1
+     */
+    idPenalty: number;
 
     /**
      * Function that decides whether an HTML tag name may be used in a selector.
      * Defaults to allowing all tags.
      */
-    tagName: (name: string) => boolean;
+    tagNameFilter: (name: string) => boolean;
+
+    /**
+     * Penalty applied to tag selectors.
+     * Example: `div`
+     *
+     * A lower value tends to yield more tag-based CSS selectors.
+     *
+     * @default 1.1
+     */
+    tagPenalty: number;
 
     /**
      * Function that decides whether a CSS class name may be used in a selector.
      * Defaults to disallowing `is-*|has-*|js-*|css-*` classes.
      */
-    className: (name: string) => boolean;
+    classNameFilter: (name: string) => boolean;
+
+    /**
+     * Penalty applied to class name selectors.
+     * Example: `.button`
+     *
+     * A lower value tends to yield more class-based CSS selectors.
+     *
+     * @default 1.3
+     */
+    classPenalty: number;
 
     /**
      * Function that decides whether an attribute `(name, value)` pair may be used
      * in a selector. Defaults to allowing any attribute except `*style|*width|*height`
      * that is shorter than 32 characters, and not a URL.
      */
-    attr: (name: string, value: string) => boolean;
+    attrFilter: (name: string, value: string) => boolean;
 
     /**
-     * Maximum time in milliseconds to spend searching before giving up and
-     * returning however many results have been found so far (or the nth-of-type
-     * fallback if none were found).
+     * Penalty applied to attribute selectors.
+     * Example: `[name]`, `[value="1"]`
      *
-     * @default 1500
+     * A lower value tends to yield more attribute-based CSS selectors.
+     *
+     * @default 1.25
      */
-    timeout: number;
+    attrPenalty: number;
 
     /**
-     * Percentage of CSS selectors that match the target element first, while potentially
-     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
-     * match the target element exclusively.
+     * Penalty applied to prefix-matched and suffix-matched attribute selectors.
+     * Example: `[name^="x"]`, `[value$="5"]`
      *
-     * A higher value tends to yield shorter CSS selectors.
+     * A lower value tends to yield more CSS selectors that contain
+     * attribute values prefixes or suffixes.
      *
-     * @default 5
+     * @default 1.2
      */
-    fuzziness: number;
+    attrMatchPenalty: number;
+
+    /**
+     * Penalty applied to nth-of-type selectors.
+     * Example: `div:nth-of-type(1)`
+     *
+     * A lower value tends to yield more nth-of-type CSS selectors.
+     *
+     * @default 3
+     */
+    nthOfTypePenalty: number;
+
+    /**
+     * Penalty applied to nth-child selectors.
+     * Example: `:nth-child(1)`
+     *
+     * A lower value tends to yield more nth-child CSS selectors.
+     *
+     * @default 6
+     */
+    nthChildPenalty: number;
 
     /**
      * Apply a penalty to CSS selectors whose length exceeds this number of characters.
@@ -81,7 +132,7 @@ export interface Uindow_CSS_Config {
      *
      * @default 32
      */
-    startLengthPenalty: number;
+    lengthPenaltyThreshold: number;
 
     /**
      * Hard cap on the number of candidates yielded per level.
@@ -115,6 +166,26 @@ export interface Uindow_CSS_Config {
      * @default 25
      */
     maxResults: number;
+
+    /**
+     * Percentage of CSS selectors that match the target element first, while potentially
+     * also matching additional elements on the page. Set to `0` to ensure CSS selectors
+     * match the target element exclusively.
+     *
+     * A higher value tends to yield shorter CSS selectors.
+     *
+     * @default 5
+     */
+    fuzziness: number;
+
+    /**
+     * Maximum time in milliseconds to spend searching before giving up and
+     * returning however many results have been found so far (or the nth-of-type
+     * fallback if none were found).
+     *
+     * @default 1500
+     */
+    timeout: number;
 }
 
 /**
@@ -167,17 +238,6 @@ export interface Uindow_CSS_Result {
  * @namespace Uindow_CSS
  */
 class Uindow_CSS {
-    /**
-     * Penalties are multiplicative
-     */
-    static readonly #PENALTY_ID = 1;
-    static readonly #PENALTY_TAG = 1.1;
-    static readonly #PENALTY_ATTR_MOD = 1.2;
-    static readonly #PENALTY_ATTR = 1.25;
-    static readonly #PENALTY_CLASS = 1.3;
-    static readonly #PENALTY_NTH_OF_TYPE = 3;
-    static readonly #PENALTY_NTH_CHILD = 6;
-
     /**
      * Return the single best CSS selector for the target element.
      *
@@ -287,7 +347,7 @@ class Uindow_CSS {
 
                     path.push({
                         compound: `${tag}:nth-of-type(${index})`,
-                        penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE,
+                        penalty: config.nthOfTypePenalty,
                         level
                     });
 
@@ -304,7 +364,7 @@ class Uindow_CSS {
             return [
                 {
                     selector: Uindow_CSS.#selector(fallbackPath),
-                    penalty: Uindow_CSS.#penalty(fallbackPath, config.startLengthPenalty)
+                    penalty: Uindow_CSS.#penalty(fallbackPath, config.lengthPenaltyThreshold)
                 }
             ];
         }
@@ -321,7 +381,7 @@ class Uindow_CSS {
             }
 
             selectors.add(selector);
-            results.push({ selector, penalty: Uindow_CSS.#penalty(path, config.startLengthPenalty) });
+            results.push({ selector, penalty: Uindow_CSS.#penalty(path, config.lengthPenaltyThreshold) });
         };
 
         // Walk through the candidates
@@ -360,29 +420,45 @@ class Uindow_CSS {
 
         // Sanitize inputs
         config.root = options.root instanceof HTMLElement ? options.root : document.documentElement;
-        config.idName = "function" === typeof options.idName ? options.idName : () => true;
-        config.tagName = "function" === typeof options.tagName ? options.tagName : () => true;
-        config.className =
-            "function" === typeof options.className ? options.className : (n: string) => !n.match(/^(is-|has-|js-|css-)/);
-        config.attr =
-            "function" === typeof options.attr
-                ? options.attr
+        config.idNameFilter = "function" === typeof options.idNameFilter ? options.idNameFilter : () => true;
+        config.tagNameFilter = "function" === typeof options.tagNameFilter ? options.tagNameFilter : () => true;
+        config.classNameFilter =
+            "function" === typeof options.classNameFilter
+                ? options.classNameFilter
+                : (n: string) => !n.match(/^(is-|has-|js-|css-)/);
+        config.attrFilter =
+            "function" === typeof options.attrFilter
+                ? options.attrFilter
                 : (n: string, v: string) => !/(?:width|height|style)$/i.test(n) && 32 >= v.length && !/^(?:\w+:)?\/\/?/i.test(v);
 
         // Default integers
         const integers: Record<string, number> = {
-            timeout: 1500,
-            fuzziness: 5,
-            startLengthPenalty: 32,
-            maxPathsTotal: 1000,
-            maxPathsPerLevel: 50,
+            lengthPenaltyThreshold: 32,
             maxCandidatesPerLevel: 2500,
-            maxResults: 25
+            maxPathsPerLevel: 50,
+            maxPathsTotal: 1000,
+            maxResults: 25,
+            fuzziness: 5,
+            timeout: 1500
         };
-
         for (const key of Object.keys(integers) as (keyof typeof integers)[]) {
             const val = (options as Record<string, unknown>)[key];
             (config as unknown as Record<string, number>)[key] = Number.isInteger(val) ? Math.abs(val as number) : integers[key];
+        }
+
+        // Default floats
+        const floats: Record<string, number> = {
+            idPenalty: 1,
+            tagPenalty: 1.1,
+            classPenalty: 1.3,
+            attrPenalty: 1.25,
+            attrMatchPenalty: 1.2,
+            nthOfTypePenalty: 3,
+            nthChildPenalty: 6
+        };
+        for (const key of Object.keys(floats) as (keyof typeof floats)[]) {
+            const val = (options as Record<string, unknown>)[key];
+            (config as unknown as Record<string, number>)[key] = Number.isFinite(val) ? Math.abs(val as number) : floats[key];
         }
 
         return config;
@@ -440,7 +516,8 @@ class Uindow_CSS {
             // Prepare path
             const path = [...combine(pathList)];
             path.sort(
-                (a, b) => Uindow_CSS.#penalty(a, config.startLengthPenalty) - Uindow_CSS.#penalty(b, config.startLengthPenalty)
+                (a, b) =>
+                    Uindow_CSS.#penalty(a, config.lengthPenaltyThreshold) - Uindow_CSS.#penalty(b, config.lengthPenaltyThreshold)
             );
 
             // Yield candidates one by one
@@ -503,25 +580,25 @@ class Uindow_CSS {
 
         // ID
         const elementId = element.getAttribute("id");
-        if (elementId && config.idName(elementId)) {
-            path.push({ compound: "#" + CSS.escape(elementId), penalty: Uindow_CSS.#PENALTY_ID, level });
+        if (elementId && config.idNameFilter(elementId)) {
+            path.push({ compound: "#" + CSS.escape(elementId), penalty: config.idPenalty, level });
         }
 
         // Tag
         const tag = element.tagName.toLowerCase();
-        if (config.tagName(tag)) {
-            path.push({ compound: tag, penalty: Uindow_CSS.#PENALTY_TAG, level });
+        if (config.tagNameFilter(tag)) {
+            path.push({ compound: tag, penalty: config.tagPenalty, level });
 
             // tag:nth-of-type()
             const idxOfType = Uindow_CSS.#indexOf(element, tag);
             if (-1 !== idxOfType) {
-                path.push({ compound: `${tag}:nth-of-type(${idxOfType})`, penalty: Uindow_CSS.#PENALTY_NTH_OF_TYPE, level });
+                path.push({ compound: `${tag}:nth-of-type(${idxOfType})`, penalty: config.nthOfTypePenalty, level });
             }
 
             // :nth-child()
             const nthIdx = Uindow_CSS.#indexOf(element);
             if (-1 !== nthIdx) {
-                path.push({ compound: `:nth-child(${nthIdx})`, penalty: Uindow_CSS.#PENALTY_NTH_CHILD, level });
+                path.push({ compound: `:nth-child(${nthIdx})`, penalty: config.nthChildPenalty, level });
             }
         }
 
@@ -575,13 +652,13 @@ class Uindow_CSS {
         // Classes
         const classSelectors: string[] = [];
         for (let i = 0; i < element.classList.length; i++) {
-            if (config.className(element.classList[i])) {
+            if (config.classNameFilter(element.classList[i])) {
                 const selector = `.${CSS.escape(element.classList[i])}`;
                 classSelectors.push(selector);
-                path.push({ compound: selector, penalty: Uindow_CSS.#PENALTY_CLASS, level });
+                path.push({ compound: selector, penalty: config.classPenalty, level });
             }
         }
-        mergeTwo(classSelectors, Uindow_CSS.#PENALTY_CLASS);
+        mergeTwo(classSelectors, config.classPenalty);
 
         // Attributes
         const attrSelectors: string[] = [];
@@ -597,33 +674,33 @@ class Uindow_CSS {
             }
 
             // Passed attribute checks
-            if (config.attr(attrName, attrValue)) {
+            if (config.attrFilter(attrName, attrValue)) {
                 // Standard selector
                 const selector = `[${CSS.escape(attrName)}${attrValue.length ? `="${safeValue(attrValue)}"` : ""}]`;
                 attrSelectors.push(selector);
-                path.push({ compound: selector, penalty: Uindow_CSS.#PENALTY_ATTR, level });
+                path.push({ compound: selector, penalty: config.attrPenalty, level });
 
                 // Prefix match selector
                 const startWord = attrValue.match(/^(\w{2,12})/g);
                 if (startWord && startWord[0].length < attrValue.length) {
                     const startSelector = `[${CSS.escape(attrName)}^="${safeValue(startWord[0])}"]`;
-                    path.push({ compound: startSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
+                    path.push({ compound: startSelector, penalty: config.attrMatchPenalty, level });
                 }
 
                 // Suffix match selector
                 const endWord = attrValue.match(/(\w{2,12})$/g);
                 if (endWord && endWord[0].length < attrValue.length) {
                     const endSelector = `[${CSS.escape(attrName)}$="${safeValue(endWord[0])}"]`;
-                    path.push({ compound: endSelector, penalty: Uindow_CSS.#PENALTY_ATTR_MOD, level });
+                    path.push({ compound: endSelector, penalty: config.attrMatchPenalty, level });
                 }
             }
         }
-        mergeTwo(attrSelectors, Uindow_CSS.#PENALTY_ATTR);
+        mergeTwo(attrSelectors, config.attrPenalty);
 
         // Merge classes and attributes
         mergeThree(
             [...classSelectors.slice(0, 4), ...attrSelectors.slice(0, 4)],
-            Math.min(Uindow_CSS.#PENALTY_ATTR, Uindow_CSS.#PENALTY_CLASS)
+            Math.min(config.attrPenalty, config.classPenalty)
         );
 
         return path;
@@ -657,15 +734,15 @@ class Uindow_CSS {
     /**
      * Calculate penalties across all nodes in a path.
      *
-     * @param path          Path
-     * @param lengthPenalty Length penalty threshold
+     * @param path Path
+     * @param lpt  Length Penalty Threshold
      *
      * @returns Total penalty score
      */
-    static #penalty(path: Uindow_CSS_Path, lengthPenalty = 10): number {
+    static #penalty(path: Uindow_CSS_Path, lpt = 32): number {
         // Penalty by total length
         const length = path.reduce((acc, node) => acc + node.compound.length, 0);
-        const pLength = length > lengthPenalty ? length / lengthPenalty : 1;
+        const pLength = length > lpt ? length / lpt : 1;
 
         // Round to 3 digits
         return Math.round(1000 * path.reduce((acc, node) => acc * node.penalty * 1, 1) * pLength) / 1000;
