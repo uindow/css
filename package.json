@@ -21,9 +21,13 @@
     "homepage": "https://uindow.com",
     "keywords": [
         "css",
+        "uindow",
         "selector",
         "generator",
-        "uindow"
+        "css-selector",
+        "dom-selector",
+        "css-selector-generator",
+        "dom-selector-generator"
     ],
     "scripts": {
         "format": "prettier --write \"{src,types}/**/*.ts\"",
