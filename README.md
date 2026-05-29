@@ -10,6 +10,12 @@ Generate one - or many - unique CSS selectors for any DOM element. Clean, human-
 
 Works everywhere JavaScript runs: Node.js, browsers, and any environment with a DOM.
 
+<p align="center">
+    <a href="https://uindow.github.io/img/uindow-css.gif" target="_blank">
+        <img src="https://uindow.github.io/img/uindow-css.gif"/>
+    </a>
+</p>
+
 ---
 
 ## Installation
