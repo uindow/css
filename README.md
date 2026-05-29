@@ -175,8 +175,8 @@ findAll(el, {
 By default, `@uindow/css` only returns selectors that match the target element exclusively. Set `fuzziness > 0` to allow selectors that match the target *first* while potentially matching other elements too - trading strict uniqueness for shorter, cleaner output.
 
 ```js
-findAll(el, { fuzziness: 5   }); // Up to 5% non-exclusive matches allowed (default)
-findAll(el, { fuzziness: 0   }); // Strict - only exclusive selectors
+findAll(el, { fuzziness: 0   }); // Strict - only exclusive selectors (default)
+findAll(el, { fuzziness: 5   }); // Up to 5% non-exclusive matches allowed
 findAll(el, { fuzziness: 20  }); // Relaxed - prioritise brevity
 findAll(el, { fuzziness: 100 }); // Fuzzy - only non-exclusive (first-match) selectors
 ```
@@ -263,7 +263,7 @@ findAll(el, {
     timeout:                1500,
 
     // Percentage of shorter, first-match selectors
-    fuzziness: 5,
+    fuzziness: 0,
 });
 ```
 

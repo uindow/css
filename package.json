@@ -1,6 +1,6 @@
 {
     "name": "@uindow/css",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "description": "CSS Selector Generator",
     "main": "index.js",
     "module": "index.mjs",

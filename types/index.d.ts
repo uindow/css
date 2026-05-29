@@ -86,10 +86,11 @@ export interface Uindow_CSS_Config {
     attrPenalty: number;
     /**
      * Penalty applied to prefix-matched and suffix-matched attribute selectors.
-     * Example: `[name^="x"]`, `[value$="5"]`
+     * Example prefix-matched attribute selector: `[name^="a"]`
+     * Example suffix-matched attribute selector: `[name$="z"]`
      *
      * A lower value tends to yield more CSS selectors that contain
-     * attribute values prefixes or suffixes.
+     * prefix-matched and suffix-matched attribute selectors.
      *
      * @default 1.2
      */
@@ -116,6 +117,7 @@ export interface Uindow_CSS_Config {
      * Apply a penalty to CSS selectors whose length exceeds this number of characters.
      *
      * A lower value tends to yield shorter CSS selectors.
+     * Must be greater than or equal to 1.
      *
      * @default 32
      */
@@ -124,12 +126,16 @@ export interface Uindow_CSS_Config {
      * Hard cap on the number of candidates yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
      *
+     * Must be greater than or equal to `maxPathsPerLevel`.
+     *
      * @default 2500
      */
     maxCandidatesPerLevel: number;
     /**
      * Hard cap on the number of unique paths yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
+     *
+     * Must be greater than or equal to `maxResults`.
      *
      * @default 50
      */
@@ -138,13 +144,15 @@ export interface Uindow_CSS_Config {
      * Hard cap on the number of unique paths yielded in total.
      * Useful for very deep or very wide DOMs where the search space is large.
      *
-     * This value should always be lower than `maxResults`.
+     * Must be greater than or equal to `maxResults`.
      *
      * @default 1000
      */
     maxPathsTotal: number;
     /**
-     * Maximum number of distinct selectors to return, sorted by increasing penalty.
+     * Maximum number of optimized selectors to return, sorted by increasing penalty.
+     *
+     * Must be greater than or equal to 1.
      *
      * @default 25
      */
@@ -157,13 +165,16 @@ export interface Uindow_CSS_Config {
      *
      * A higher value tends to yield shorter CSS selectors.
      *
-     * @default 5
+     * @default 0
      */
     fuzziness: number;
     /**
      * Maximum time in milliseconds to spend searching before giving up and
-     * returning however many results have been found so far (or the nth-of-type
-     * fallback if none were found).
+     * returning however many results have been found so far, or the nth-of-type fallback
+     * if none were found.
+     *
+     * An small additional delay will be incurred after the search, during the
+     * CSS path optimization phase.
      *
      * @default 1500
      */

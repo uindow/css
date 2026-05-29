@@ -96,10 +96,11 @@ export interface Uindow_CSS_Config {
 
     /**
      * Penalty applied to prefix-matched and suffix-matched attribute selectors.
-     * Example: `[name^="x"]`, `[value$="5"]`
+     * Example prefix-matched attribute selector: `[name^="a"]`
+     * Example suffix-matched attribute selector: `[name$="z"]`
      *
      * A lower value tends to yield more CSS selectors that contain
-     * attribute values prefixes or suffixes.
+     * prefix-matched and suffix-matched attribute selectors.
      *
      * @default 1.2
      */
@@ -129,6 +130,7 @@ export interface Uindow_CSS_Config {
      * Apply a penalty to CSS selectors whose length exceeds this number of characters.
      *
      * A lower value tends to yield shorter CSS selectors.
+     * Must be greater than or equal to 1.
      *
      * @default 32
      */
@@ -138,6 +140,8 @@ export interface Uindow_CSS_Config {
      * Hard cap on the number of candidates yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
      *
+     * Must be greater than or equal to `maxPathsPerLevel`.
+     *
      * @default 2500
      */
     maxCandidatesPerLevel: number;
@@ -145,6 +149,8 @@ export interface Uindow_CSS_Config {
     /**
      * Hard cap on the number of unique paths yielded per level.
      * Useful for very deep or very wide DOMs where the search space is large.
+     *
+     * Must be greater than or equal to `maxResults`.
      *
      * @default 50
      */
@@ -154,14 +160,16 @@ export interface Uindow_CSS_Config {
      * Hard cap on the number of unique paths yielded in total.
      * Useful for very deep or very wide DOMs where the search space is large.
      *
-     * This value should always be lower than `maxResults`.
+     * Must be greater than or equal to `maxResults`.
      *
      * @default 1000
      */
     maxPathsTotal: number;
 
     /**
-     * Maximum number of distinct selectors to return, sorted by increasing penalty.
+     * Maximum number of optimized selectors to return, sorted by increasing penalty.
+     *
+     * Must be greater than or equal to 1.
      *
      * @default 25
      */
@@ -175,14 +183,17 @@ export interface Uindow_CSS_Config {
      *
      * A higher value tends to yield shorter CSS selectors.
      *
-     * @default 5
+     * @default 0
      */
     fuzziness: number;
 
     /**
      * Maximum time in milliseconds to spend searching before giving up and
-     * returning however many results have been found so far (or the nth-of-type
-     * fallback if none were found).
+     * returning however many results have been found so far, or the nth-of-type fallback
+     * if none were found.
+     *
+     * An small additional delay will be incurred after the search, during the
+     * CSS path optimization phase.
      *
      * @default 1500
      */
@@ -299,8 +310,8 @@ class Uindow_CSS {
         // Limit the number candidates per level
         const pathsPerLevel: Record<number, number> = {};
 
-        // Collect candidate paths
-        const candidates: Uindow_CSS_Path[] = [];
+        // Collect candidates
+        const candidates: { path: Uindow_CSS_Path; penalty: number }[] = [];
         for (const { candidate, level } of Uindow_CSS.#find(element, config, root)) {
             if (performance.now() - startTime > config.timeout) {
                 break;
@@ -317,8 +328,8 @@ class Uindow_CSS {
             }
 
             if (Uindow_CSS.#matches(element, config, candidate, root)) {
-                // Store the candidate
-                candidates.push(candidate);
+                // Store the candidate path and penalty
+                candidates.push({ path: candidate, penalty: Uindow_CSS.#penalty(candidate, config) });
 
                 // Increment paths per level
                 pathsPerLevel[level]++;
@@ -339,15 +350,15 @@ class Uindow_CSS {
                 let current: HTMLElement | null = element;
                 while (current && current !== root) {
                     const tag = current.tagName.toLowerCase();
-                    const index = Uindow_CSS.#indexOf(current, tag);
+                    const idxOfType = Uindow_CSS.#indexOf(current, tag);
 
                     // Out of DOM
-                    if (-1 === index) {
+                    if (-1 === idxOfType) {
                         return [];
                     }
 
                     path.push({
-                        compound: `${tag}:nth-of-type(${index})`,
+                        compound: `${tag}:nth-of-type(${idxOfType})`,
                         penalty: config.nthOfTypePenalty,
                         level
                     });
@@ -365,10 +376,13 @@ class Uindow_CSS {
             return [
                 {
                     selector: Uindow_CSS.#selector(fallbackPath),
-                    penalty: Uindow_CSS.#penalty(fallbackPath, config.lengthPenaltyThreshold)
+                    penalty: Uindow_CSS.#penalty(fallbackPath, config)
                 }
             ];
         }
+
+        // Sort candidates by penalty
+        candidates.sort((a, b) => a.penalty - b.penalty);
 
         // Prepare the results
         const results: Uindow_CSS_Result[] = [];
@@ -382,13 +396,13 @@ class Uindow_CSS {
             }
 
             selectors.add(selector);
-            results.push({ selector, penalty: Uindow_CSS.#penalty(path, config.lengthPenaltyThreshold) });
+            results.push({ selector, penalty: Uindow_CSS.#penalty(path, config) });
         };
 
         // Walk through the candidates
-        treatRaw: for (const candidate of candidates) {
-            for (const path of Uindow_CSS.#optimize(candidate, element, config, root)) {
-                append(path);
+        treatRaw: for (const { path } of candidates) {
+            for (const optimized of Uindow_CSS.#optimize(path, element, config, root)) {
+                append(optimized);
 
                 // Wider base
                 if (results.length >= config.maxResults * 25) {
@@ -396,10 +410,10 @@ class Uindow_CSS {
                 }
             }
 
-            append(candidate);
+            append(path);
         }
 
-        // Sort by penalty
+        // Sort by penalty (scores updated by optimization step)
         results.sort((a, b) => a.penalty - b.penalty);
 
         return results.slice(0, config.maxResults);
@@ -428,7 +442,7 @@ class Uindow_CSS {
         config.attrFilter =
             "function" === typeof options.attrFilter
                 ? options.attrFilter
-                : (n: string, v: string) => !/(?:width|height|style)$/i.test(n) && 32 >= v.length && !/^(?:\w+:)?\/\/?/i.test(v);
+                : (n: string, v: string) => !/(?:width|height|style)$/i.test(n) && v.length <= 32 && !/^(?:\w+:)?\/\/?/i.test(v);
 
         // Sanitize integers
         const integers: Partial<Uindow_CSS_Config> = {
@@ -437,13 +451,33 @@ class Uindow_CSS {
             maxPathsPerLevel: 50,
             maxPathsTotal: 1000,
             maxResults: 25,
-            fuzziness: 5,
+            fuzziness: 0,
             timeout: 1500
         };
         for (const key of Object.keys(integers) as (keyof typeof integers)[]) {
             (config as unknown as Record<string, unknown>)[key] = Number.isInteger(options[key])
                 ? Math.abs(options[key] as number)
                 : integers[key];
+        }
+
+        if (config.lengthPenaltyThreshold < 1) {
+            config.lengthPenaltyThreshold = 1;
+        }
+
+        if (config.maxResults < 1) {
+            config.maxResults = 1;
+        }
+
+        if (config.maxPathsTotal < config.maxResults) {
+            config.maxPathsTotal = config.maxResults;
+        }
+
+        if (config.maxPathsPerLevel < config.maxResults) {
+            config.maxPathsPerLevel = config.maxResults;
+        }
+
+        if (config.maxCandidatesPerLevel < config.maxPathsPerLevel) {
+            config.maxCandidatesPerLevel = config.maxPathsPerLevel;
         }
 
         // Sanitize floats
@@ -495,8 +529,9 @@ class Uindow_CSS {
                 return;
             }
 
-            if (!(0 < paths.length)) {
+            if (!paths.length) {
                 counter.count++;
+
                 yield path;
                 return;
             }
@@ -516,10 +551,7 @@ class Uindow_CSS {
 
             // Prepare path
             const path = [...combine(pathList)];
-            path.sort(
-                (a, b) =>
-                    Uindow_CSS.#penalty(a, config.lengthPenaltyThreshold) - Uindow_CSS.#penalty(b, config.lengthPenaltyThreshold)
-            );
+            path.sort((a, b) => Uindow_CSS.#penalty(a, config) - Uindow_CSS.#penalty(b, config));
 
             // Yield candidates one by one
             for (const candidate of path) {
@@ -549,7 +581,7 @@ class Uindow_CSS {
         config: Uindow_CSS_Config,
         root: Uindow_CSS_Root
     ): Generator<Uindow_CSS_Path> {
-        if (2 >= path.length) {
+        if (path.length <= 2) {
             return;
         }
 
@@ -590,13 +622,17 @@ class Uindow_CSS {
         if (config.tagFilter(tag)) {
             path.push({ compound: tag, penalty: config.tagPenalty, level });
 
-            // tag:nth-of-type()
+            // :nth-of-type
             const idxOfType = Uindow_CSS.#indexOf(element, tag);
             if (-1 !== idxOfType) {
-                path.push({ compound: `${tag}:nth-of-type(${idxOfType})`, penalty: config.nthOfTypePenalty, level });
+                path.push({
+                    compound: `${tag}:nth-of-type(${idxOfType})`,
+                    penalty: config.nthOfTypePenalty,
+                    level
+                });
             }
 
-            // :nth-child()
+            // :nth-child
             const nthIdx = Uindow_CSS.#indexOf(element);
             if (-1 !== nthIdx) {
                 path.push({ compound: `:nth-child(${nthIdx})`, penalty: config.nthChildPenalty, level });
@@ -604,7 +640,7 @@ class Uindow_CSS {
         }
 
         const mergeTwo = (items: string[], penalty: number): void => {
-            if (!Array.isArray(items) || 2 > items.length) {
+            if (!Array.isArray(items) || items.length < 2) {
                 return;
             }
 
@@ -627,7 +663,7 @@ class Uindow_CSS {
         };
 
         const mergeThree = (items: string[], penalty: number): void => {
-            if (!Array.isArray(items) || 3 > items.length) {
+            if (!Array.isArray(items) || items.length < 3) {
                 return;
             }
 
@@ -735,15 +771,18 @@ class Uindow_CSS {
     /**
      * Calculate penalties across all nodes in a path.
      *
-     * @param path Path
-     * @param lpt  Length Penalty Threshold
+     * @param path   Path
+     * @param config Configuration object
      *
      * @returns Total penalty score
      */
-    static #penalty(path: Uindow_CSS_Path, lpt = 32): number {
+    static #penalty(path: Uindow_CSS_Path, config: Uindow_CSS_Config): number {
         // Penalty by total length
         const length = path.reduce((acc, node) => acc + node.compound.length, 0);
-        const pLength = length > lpt ? length / lpt : 1;
+        const pLength =
+            config.lengthPenaltyThreshold > 0 && length > config.lengthPenaltyThreshold
+                ? length / config.lengthPenaltyThreshold
+                : 1;
 
         // Round to 3 digits
         return Math.round(1000 * path.reduce((acc, node) => acc * node.penalty * 1, 1) * pLength) / 1000;
@@ -810,7 +849,7 @@ class Uindow_CSS {
 
             // Decide strategy
             const firstMatch =
-                100 <= config.fuzziness || (0 < config.fuzziness && Math.floor(Math.random() * 100) < config.fuzziness);
+                config.fuzziness >= 100 || (config.fuzziness > 0 && Math.floor(Math.random() * 100) < config.fuzziness);
 
             // Fuzzy match - true if first element matched by CSS is ours
             if (firstMatch) {
