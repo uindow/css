@@ -35,47 +35,47 @@ const fs = require("fs");
  * @param {string} text     Text
  */
 const filePrepend = (filePath, text) => {
-    if (!fs.existsSync(filePath)) {
-        return;
-    }
+	if (!fs.existsSync(filePath)) {
+		return;
+	}
 
-    const filePathTemp = `${filePath}.tmp`;
+	const filePathTemp = `${filePath}.tmp`;
 
-    // Prepare the buffer
-    const bufferSize = 64 * 1024;
-    const buffer = Buffer.alloc(bufferSize);
+	// Prepare the buffer
+	const bufferSize = 64 * 1024;
+	const buffer = Buffer.alloc(bufferSize);
 
-    // Open the original file
-    const readFd = fs.openSync(filePath, "r");
-    const writeFd = fs.openSync(filePathTemp, "a");
+	// Open the original file
+	const readFd = fs.openSync(filePath, "r");
+	const writeFd = fs.openSync(filePathTemp, "a");
 
-    // Prepend the text
-    fs.writeSync(writeFd, Buffer.from(`${text}`), 0);
+	// Prepend the text
+	fs.writeSync(writeFd, Buffer.from(`${text}`), 0);
 
-    // Append the rest of the file
-    do {
-        const bytesRead = fs.readSync(readFd, buffer, 0, bufferSize, null);
-        if (1 > bytesRead) {
-            break;
-        }
+	// Append the rest of the file
+	do {
+		const bytesRead = fs.readSync(readFd, buffer, 0, bufferSize, null);
+		if (1 > bytesRead) {
+			break;
+		}
 
-        fs.writeSync(writeFd, buffer, 0, bytesRead);
-    } while (true);
+		fs.writeSync(writeFd, buffer, 0, bytesRead);
+	} while (true);
 
-    // Close file descriptors
-    fs.closeSync(readFd);
-    fs.closeSync(writeFd);
+	// Close file descriptors
+	fs.closeSync(readFd);
+	fs.closeSync(writeFd);
 
-    // Replace the original file
-    fs.renameSync(filePathTemp, filePath, { overwrite: true });
+	// Replace the original file
+	fs.renameSync(filePathTemp, filePath, { overwrite: true });
 };
 
 (async () => {
-    const startTime = performance.now();
-    const rootPath = path.dirname(__dirname);
+	const startTime = performance.now();
+	const rootPath = path.dirname(__dirname);
 
-    const copyrightYear = 2026 < new Date().getFullYear() ? `2026-${new Date().getFullYear()}` : 2026;
-    const copyright = `
+	const copyrightYear = 2026 < new Date().getFullYear() ? `2026-${new Date().getFullYear()}` : 2026;
+	const copyright = `
 Uindow's CSS Selector Generator
 
 @architect Mark Jivko <mark@uindow.com>
@@ -101,39 +101,39 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.`.trim();
 
-    // Prepare exports
-    const outputs = [
-        {
-            // Npm: Common JS
-            file: "index.js",
-            config: { format: "cjs", platform: "node" }
-        },
-        {
-            // Npm: Module
-            file: "index.mjs",
-            config: { format: "esm" }
-        },
-        {
-            // Web: uindow.github.io/css/selector.js
-            file: "docs/selector.js",
-            config: { format: "iife", globalName: "Uindow_CSS", sourcesContent: true }
-        }
-    ];
-    for (const output of outputs) {
-        await esbuild.build({
-            entryPoints: [path.join(rootPath, "src", "index.ts")],
-            outfile: path.join(rootPath, output.file),
-            minify: true,
-            keepNames: true,
-            minifyIdentifiers: false,
-            target: ["es2020"],
-            sourcemap: true,
-            sourcesContent: false,
-            ...output.config
-        });
-        filePrepend(path.join(rootPath, output.file), "/**\n" + copyright.replace(/^/gm, " * ") + "\n */\n");
-    }
+	// Prepare exports
+	const outputs = [
+		{
+			// Npm: Common JS
+			file: "index.js",
+			config: { format: "cjs", platform: "node" }
+		},
+		{
+			// Npm: Module
+			file: "index.mjs",
+			config: { format: "esm" }
+		},
+		{
+			// Web: uindow.github.io/css/selector.js
+			file: "docs/selector.js",
+			config: { format: "iife", globalName: "Uindow_CSS", sourcesContent: true }
+		}
+	];
+	for (const output of outputs) {
+		await esbuild.build({
+			entryPoints: [path.join(rootPath, "src", "index.ts")],
+			outfile: path.join(rootPath, output.file),
+			minify: true,
+			keepNames: true,
+			minifyIdentifiers: false,
+			target: ["es2020"],
+			sourcemap: true,
+			sourcesContent: false,
+			...output.config
+		});
+		filePrepend(path.join(rootPath, output.file), "/**\n" + copyright.replace(/^/gm, " * ") + "\n */\n");
+	}
 
-    const logMessage = `Assets exported in ${Math.floor(1000 * (performance.now() - startTime)) / 1000}ms`;
-    console.log(`\n\x1b[32m${logMessage}\x1b[0m\n`);
+	const logMessage = `Assets exported in ${Math.floor(1000 * (performance.now() - startTime)) / 1000}ms`;
+	console.log(`\n\x1b[32m${logMessage}\x1b[0m\n`);
 })();
