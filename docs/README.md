@@ -52,7 +52,7 @@ const results = findAll(document.querySelector(".hero"));
 - Supports **prefix and suffix attribute matching** - `[attr^="start"]`, `[attr$="end"]`
 - Always emits **clean, readable** `[attr="value"]` - never CSS-escaped sequences
 - Sensible defaults: filters out `style`, `width`, `height`, URLs, and runtime class hooks (`is-*`, `has-*`, `js-*`, `css-*`)
-- Fully configurable: penalty weights, filters, path caps, fuzziness, and search timeout
+- Fully configurable: penalty weights, filters, path caps, fuzziness, effort, and search timeout
 - Full TypeScript support
 
 For the full API and configuration reference, see the [documentation](https://github.com/uindow/css).

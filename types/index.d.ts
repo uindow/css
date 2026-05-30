@@ -170,12 +170,23 @@ export interface Uindow_CSS_Config {
 	 * Fuzziness defines the percentage of CSS selectors that match the target element first,
 	 * while potentially also matching additional elements on the page.
 	 * Set to `0` to ensure CSS selectors match the target element exclusively.
+	 * Must be a positive integer between `0` and `100`.
 	 *
 	 * A higher value tends to yield shorter CSS selectors.
 	 *
 	 * @default 0
 	 */
 	fuzziness: number;
+	/**
+	 * Trade processing time for shorter selectors.
+	 * Spend more time optimizing candidate selectors for shorter and more desirable paths.
+	 * Must be a positive integer between `0` and `100`.
+	 *
+	 * A higher value tends to yield shorter CSS selectors at the cost of extra processing time.
+	 *
+	 * @default 50
+	 */
+	effort: number;
 	/**
 	 * Maximum time in milliseconds to spend searching before giving up and
 	 * returning however many results have been found so far, or the nth-of-type fallback

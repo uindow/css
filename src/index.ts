@@ -188,12 +188,24 @@ export interface Uindow_CSS_Config {
 	 * Fuzziness defines the percentage of CSS selectors that match the target element first,
 	 * while potentially also matching additional elements on the page.
 	 * Set to `0` to ensure CSS selectors match the target element exclusively.
+	 * Must be a positive integer between `0` and `100`.
 	 *
 	 * A higher value tends to yield shorter CSS selectors.
 	 *
 	 * @default 0
 	 */
 	fuzziness: number;
+
+	/**
+	 * Trade processing time for shorter selectors.
+	 * Spend more time optimizing candidate selectors for shorter and more desirable paths.
+	 * Must be a positive integer between `0` and `100`.
+	 *
+	 * A higher value tends to yield shorter CSS selectors at the cost of extra processing time.
+	 *
+	 * @default 50
+	 */
+	effort: number;
 
 	/**
 	 * Maximum time in milliseconds to spend searching before giving up and
@@ -407,13 +419,13 @@ class Uindow_CSS {
 			results.push({ selector, penalty: Uindow_CSS.#penalty(path, config) });
 		};
 
-		// Walk through the candidates
+		// Walk through the candidates with adjusted effort (between 1x and 50x search width)
+		const extendedMaxResults = config.maxResults * Math.round(1 + (config.effort / 100) * 49);
 		treatRaw: for (const { path } of candidates) {
 			for (const optimized of Uindow_CSS.#optimize(path, element, config, root)) {
 				append(optimized);
 
-				// Wider base
-				if (results.length >= config.maxResults * 25) {
+				if (results.length >= extendedMaxResults) {
 					break treatRaw;
 				}
 			}
@@ -460,12 +472,21 @@ class Uindow_CSS {
 			maxPathsTotal: 1000,
 			maxResults: 25,
 			fuzziness: 0,
+			effort: 50,
 			timeout: 1500
 		};
 		for (const key of Object.keys(integers) as (keyof typeof integers)[]) {
 			(config as unknown as Record<string, unknown>)[key] = Number.isInteger(options[key])
 				? Math.abs(options[key] as number)
 				: integers[key];
+		}
+
+		if (config.fuzziness > 100) {
+			config.fuzziness = 100;
+		}
+
+		if (config.effort > 100) {
+			config.effort = 100;
 		}
 
 		if (config.lengthPenaltyThreshold < 1) {

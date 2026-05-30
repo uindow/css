@@ -87,6 +87,7 @@ Most CSS selector generators treat the problem as a lookup: walk up the DOM, fin
 | [**Prefix/suffix attribute matching**](#prefix-and-suffix-attribute-matching) | ✅ `[attr^="start"]`, `[attr$="end"]` | ❌ Not supported |
 | [**Human-readable attribute selectors**](#clean-human-readable-output) | ✅ Always emits `[attr="123"]` | ❌ Uses `CSS.escape()` |
 | [**Fuzziness**](#fuzziness) | ✅  Trade exclusivity for shorter selectors (`0%` to `100%`) | ❌ Not supported |
+| [**Effort**](#effort) | ✅  Trade processing time for shorter selectors (`0%` to `100%`) | ❌ Not supported |
 | [**Compound selectors**](#compound-selectors-at-every-level) | ✅ Attempts to merge tag, classes, and attributes at each level: `input.check[type="checkbox"][value="2"]` | ❌ Simple selectors only |
 
 ---
@@ -187,6 +188,16 @@ findAll(el, { fuzziness: 20  }); // Relaxed - prioritise brevity
 findAll(el, { fuzziness: 100 }); // Fuzzy - only non-exclusive (first-match) selectors
 ```
 
+### Effort
+
+Controls how much effort is spent optimizing partial results before returning the final list. This setting trades speed for result quality: higher values spend more time exploring candidates before producing the final result set.
+
+```js
+findAll(el, { effort: 0 });   // Low effort - quickly returns the first `maxResults`
+findAll(el, { effort: 50 });  // Medium effort - evaluates 25 × `maxResults` candidates before returning the final results
+findAll(el, { effort: 100 }); // Maximum effort - evaluates 50 × `maxResults` candidates before returning the final results
+```
+
 ### Compound selectors at every level
 
 Most CSS selector generators pick a single token per ancestor level - a class, or an attribute, or a tag - and move on. This produces selectors that are either fragile (too generic) or bloated (too many levels deep).
@@ -270,6 +281,9 @@ findAll(el, {
 
     // Percentage of shorter, first-match selectors
     fuzziness: 0,
+
+    // Effort spent on optimizing candidates
+    effort: 50
 });
 ```
 
