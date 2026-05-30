@@ -1,55 +1,55 @@
 {
-    "name": "@uindow/css",
-    "version": "1.0.1",
-    "description": "CSS Selector Generator",
-    "main": "index.js",
-    "module": "index.mjs",
-    "types": "types/index.d.ts",
-    "exports": {
-        ".": {
-            "require": "./index.js",
-            "import": "./index.mjs"
-        }
-    },
-    "files": [
-        "index.js",
-        "index.js.map",
-        "index.mjs",
-        "index.mjs.map",
-        "types/index.d.ts"
-    ],
-    "license": "MIT",
-    "author": "Mark Jivko <mark@uindow.com> (https://uindow.com)",
-    "homepage": "https://uindow.com",
-    "keywords": [
-        "css",
-        "uindow",
-        "selector",
-        "generator",
-        "css-selector",
-        "dom-selector",
-        "css-selector-generator",
-        "dom-selector-generator"
-    ],
-    "scripts": {
-        "format": "prettier --write \"**/*.{js,cjs,ts}\"",
-        "lint": "eslint --fix --cache \"src/**/*.ts\"",
-        "build": "npm run lint && tsc && npm run format && node ./tools/build.cjs"
-    },
-    "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "8.60.0",
-        "esbuild": "0.25.9",
-        "eslint": "8.57.1",
-        "eslint-config-prettier": "8.10.0",
-        "eslint-plugin-prettier": "4.2.1",
-        "prettier": "2.8.8",
-        "typescript": "6.0.3"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/uindow/css.git"
-    },
-    "publishConfig": {
-        "access": "public"
-    }
+	"name": "@uindow/css",
+	"version": "1.0.1",
+	"description": "CSS Selector Generator",
+	"main": "index.js",
+	"module": "index.mjs",
+	"types": "types/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./index.js",
+			"import": "./index.mjs"
+		}
+	},
+	"files": [
+		"index.js",
+		"index.js.map",
+		"index.mjs",
+		"index.mjs.map",
+		"types/index.d.ts"
+	],
+	"license": "MIT",
+	"author": "Mark Jivko <mark@uindow.com> (https://uindow.com)",
+	"homepage": "https://uindow.com",
+	"keywords": [
+		"css",
+		"uindow",
+		"selector",
+		"generator",
+		"css-selector",
+		"dom-selector",
+		"css-selector-generator",
+		"dom-selector-generator"
+	],
+	"scripts": {
+		"format": "prettier --write \"**/*.{js,cjs,ts}\"",
+		"lint": "eslint --fix --cache \"src/**/*.ts\"",
+		"build": "npm run lint && tsc && npm run format && node ./tools/build.cjs"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "8.60.0",
+		"esbuild": "0.25.9",
+		"eslint": "8.57.1",
+		"eslint-config-prettier": "8.10.0",
+		"eslint-plugin-prettier": "4.2.1",
+		"prettier": "2.8.8",
+		"typescript": "6.0.3"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/uindow/css.git"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
 }
