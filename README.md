@@ -277,4 +277,4 @@ findAll(el, {
 
 ## License
 
-Apache 2.0 © 2026 [Uindow™](https://uindow.com)
+MIT © 2026 [Uindow™](https://uindow.com)

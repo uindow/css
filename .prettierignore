@@ -1,3 +1,8 @@
+# Readme files
 *.md
 *.mdx
+
+# Exports
 /index.js
+/index.mjs
+/docs/selector.js

@@ -1,6 +1,6 @@
 {
     "name": "@uindow/css",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "CSS Selector Generator",
     "main": "index.js",
     "module": "index.mjs",
@@ -13,10 +13,12 @@
     },
     "files": [
         "index.js",
+        "index.js.map",
         "index.mjs",
+        "index.mjs.map",
         "types/index.d.ts"
     ],
-    "license": "Apache-2.0",
+    "license": "MIT",
     "author": "Mark Jivko <mark@uindow.com> (https://uindow.com)",
     "homepage": "https://uindow.com",
     "keywords": [
@@ -30,7 +32,7 @@
         "dom-selector-generator"
     ],
     "scripts": {
-        "format": "prettier --write \"{src,types}/**/*.ts\"",
+        "format": "prettier --write \"**/*.{js,cjs,ts}\"",
         "lint": "eslint --fix --cache \"src/**/*.ts\"",
         "build": "npm run lint && tsc && npm run format && node ./tools/build.cjs"
     },

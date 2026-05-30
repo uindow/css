@@ -61,4 +61,4 @@ For the full API and configuration reference, see the [documentation](https://gi
 
 ## License
 
-Apache 2.0 © 2026 [Uindow™](https://uindow.com)
+MIT © 2026 [Uindow™](https://uindow.com)
